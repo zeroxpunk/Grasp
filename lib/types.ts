@@ -146,3 +146,4 @@ export interface ExerciseProgress {
   status: "attempted" | "completed";
   attemptedAt: string;
 }
+
