@@ -347,3 +347,4 @@ export async function appendInsightsToMemory(
     .join("\n");
   await appendToCourseMemory(slug, `## Insights — ${today}\n\n${lines}`);
 }
+
