@@ -352,3 +352,4 @@ export async function generateExercisesJson({
 
   return parsed;
 }
+
