@@ -445,3 +445,4 @@ export function ChatPanel({
 }
 
 export type { Message, ChatPanelProps };
+
