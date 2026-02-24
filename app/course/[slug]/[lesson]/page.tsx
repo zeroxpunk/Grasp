@@ -98,3 +98,4 @@ export default async function LessonPage({ params }: Props) {
     />
   );
 }
+
