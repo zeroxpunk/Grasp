@@ -135,3 +135,4 @@ export async function processMarkdownVisuals(
 
   return result;
 }
+
