@@ -696,3 +696,4 @@ Every piece of content must be visually refined — like Apple documentation. Co
 
   return { systemPrompt, userPrompt };
 }
+
