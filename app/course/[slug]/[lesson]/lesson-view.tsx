@@ -791,3 +791,4 @@ function EmptyContent({ onStart }: { onStart?: () => void }) {
     </div>
   );
 }
+
