@@ -49,3 +49,4 @@ export function ExerciseWrapper({ exercise, progress, children }: ExerciseWrappe
     </div>
   );
 }
+
