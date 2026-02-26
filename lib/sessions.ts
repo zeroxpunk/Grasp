@@ -114,3 +114,4 @@ export async function getSessionStats(courseSlug?: string): Promise<SessionStats
     totalSessions: sessions.length,
   };
 }
+
