@@ -93,3 +93,4 @@ export function normalizeExercises(raw: Record<string, unknown>[]): Exercise[] {
     return normalizeExercise(item);
   });
 }
+
