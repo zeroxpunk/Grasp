@@ -80,3 +80,4 @@ export function QuizExerciseComponent({ exercise, progress, onSelfGrade, onAnswe
     </div>
   );
 }
+
