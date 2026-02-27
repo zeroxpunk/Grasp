@@ -212,3 +212,4 @@ export function MatchingExerciseComponent({ exercise, progress, onSelfGrade, onA
     </div>
   );
 }
+
