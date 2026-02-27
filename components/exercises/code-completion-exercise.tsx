@@ -115,3 +115,4 @@ export function CodeCompletionExerciseComponent({ exercise, progress, onSelfGrad
     </div>
   );
 }
+
