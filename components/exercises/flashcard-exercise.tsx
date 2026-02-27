@@ -57,3 +57,4 @@ export function FlashcardExerciseComponent({ exercise, progress, onSelfGrade }: 
     </div>
   );
 }
+
