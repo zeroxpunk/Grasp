@@ -1,15 +1,15 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import ReactMarkdown from "react-markdown";
 import type { BugHuntExercise } from "@/lib/types";
+import { ExercisePrompt } from "./exercise-prompt";
 import type { ExerciseComponentProps } from "./exercise-renderer";
 
 export function BugHuntExerciseComponent({ exercise, progress, onSelfGrade, onAnswerInChat }: ExerciseComponentProps) {
   const ex = exercise as BugHuntExercise;
   const lines = useMemo(() => ex.code.split("\n"), [ex.code]);
   const [selectedLine, setSelectedLine] = useState<number | null>(null);
-  const [submitted, setSubmitted] = useState(progress?.status === "completed" || progress?.status === "attempted");
+  const [submitted, setSubmitted] = useState(progress?.status === "completed");
   const [isCorrect, setIsCorrect] = useState<boolean | null>(null);
 
   function handleLineClick(lineNum: number) {
@@ -23,9 +23,7 @@ export function BugHuntExerciseComponent({ exercise, progress, onSelfGrade, onAn
 
   return (
     <div>
-      <div className="text-[13px] text-zinc-400 leading-relaxed mb-4 [&_p]:mb-1.5 [&_p:last-child]:mb-0 [&_code]:bg-zinc-800/60 [&_code]:text-zinc-300 [&_code]:px-1 [&_code]:py-0.5 [&_code]:rounded [&_code]:text-[12px]">
-        <ReactMarkdown>{ex.prompt}</ReactMarkdown>
-      </div>
+      <ExercisePrompt>{ex.prompt}</ExercisePrompt>
 
       <p className="text-[11px] text-zinc-600 mb-2">Click the line that contains the bug:</p>
 
@@ -76,12 +74,20 @@ export function BugHuntExerciseComponent({ exercise, progress, onSelfGrade, onAn
         <div className="mt-3 space-y-1.5">
           <p className="text-[12px] text-red-400/80">The bug is on a different line.</p>
           <p className="text-[12px] text-zinc-500">{ex.bugExplanation}</p>
-          <button
-            onClick={() => onAnswerInChat(exercise)}
-            className="text-[11px] text-zinc-600 hover:text-zinc-400 transition-colors"
-          >
-            Still stuck? Discuss in chat &rarr;
-          </button>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => { setSubmitted(false); setIsCorrect(null); setSelectedLine(null); }}
+              className="text-[12px] px-4 py-1.5 rounded border border-zinc-700 text-zinc-400 hover:text-zinc-200 hover:border-zinc-500 transition-colors"
+            >
+              Try again
+            </button>
+            <button
+              onClick={() => onAnswerInChat(exercise)}
+              className="text-[11px] text-zinc-600 hover:text-zinc-400 transition-colors"
+            >
+              Still stuck? Discuss in chat &rarr;
+            </button>
+          </div>
         </div>
       )}
     </div>
