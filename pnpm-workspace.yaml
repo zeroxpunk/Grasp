@@ -1,3 +1,11 @@
+packages:
+  - apps/*
+  - packages/*
+
+onlyBuiltDependencies:
+  - electron
+  - esbuild
+
 ignoredBuiltDependencies:
   - sharp
   - unrs-resolver
