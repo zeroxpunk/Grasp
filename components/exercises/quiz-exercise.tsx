@@ -1,14 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import ReactMarkdown from "react-markdown";
 import type { QuizExercise } from "@/lib/types";
+import { ExercisePrompt } from "./exercise-prompt";
 import type { ExerciseComponentProps } from "./exercise-renderer";
 
 export function QuizExerciseComponent({ exercise, progress, onSelfGrade, onAnswerInChat }: ExerciseComponentProps) {
   const ex = exercise as QuizExercise;
   const [selected, setSelected] = useState<number | null>(null);
-  const [submitted, setSubmitted] = useState(progress?.status === "completed" || progress?.status === "attempted");
+  const [submitted, setSubmitted] = useState(progress?.status === "completed");
 
   const correctIndex = ex.choices.findIndex((c) => c.correct);
 
@@ -24,9 +24,7 @@ export function QuizExerciseComponent({ exercise, progress, onSelfGrade, onAnswe
 
   return (
     <div>
-      <div className="text-[13px] text-zinc-400 leading-relaxed mb-4 [&_p]:mb-1.5 [&_p:last-child]:mb-0 [&_code]:bg-zinc-800/60 [&_code]:text-zinc-300 [&_code]:px-1 [&_code]:py-0.5 [&_code]:rounded [&_code]:text-[12px] [&_strong]:text-zinc-300 [&_strong]:font-medium">
-        <ReactMarkdown>{ex.prompt}</ReactMarkdown>
-      </div>
+      <ExercisePrompt>{ex.prompt}</ExercisePrompt>
 
       <div className="space-y-2">
         {ex.choices.map((choice, i) => {
@@ -69,12 +67,20 @@ export function QuizExerciseComponent({ exercise, progress, onSelfGrade, onAnswe
           <p className="text-[12px] text-red-400/80">
             Not quite. The correct answer is highlighted above.
           </p>
-          <button
-            onClick={() => onAnswerInChat(exercise)}
-            className="text-[11px] text-zinc-600 hover:text-zinc-400 transition-colors"
-          >
-            Still stuck? Discuss in chat &rarr;
-          </button>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => { setSubmitted(false); setSelected(null); }}
+              className="text-[12px] px-4 py-1.5 rounded border border-zinc-700 text-zinc-400 hover:text-zinc-200 hover:border-zinc-500 transition-colors"
+            >
+              Try again
+            </button>
+            <button
+              onClick={() => onAnswerInChat(exercise)}
+              className="text-[11px] text-zinc-600 hover:text-zinc-400 transition-colors"
+            >
+              Still stuck? Discuss in chat &rarr;
+            </button>
+          </div>
         </div>
       )}
     </div>
