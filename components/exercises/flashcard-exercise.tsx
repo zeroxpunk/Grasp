@@ -8,7 +8,7 @@ import type { ExerciseComponentProps } from "./exercise-renderer";
 export function FlashcardExerciseComponent({ exercise, progress, onSelfGrade }: ExerciseComponentProps) {
   const ex = exercise as FlashcardExercise;
   const [flipped, setFlipped] = useState(false);
-  const [graded, setGraded] = useState(progress?.status === "completed" || progress?.status === "attempted");
+  const [graded, setGraded] = useState(progress?.status === "completed");
 
   function handleGrade(knew: boolean) {
     setGraded(true);
