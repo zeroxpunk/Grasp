@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useCallback } from "react";
-import ReactMarkdown from "react-markdown";
+import { useState, useRef, useLayoutEffect, useCallback } from "react";
 import type { OrderingExercise } from "@/lib/types";
+import { ExercisePrompt } from "./exercise-prompt";
 import type { ExerciseComponentProps } from "./exercise-renderer";
 
 function shuffle<T>(arr: T[]): T[] {
@@ -23,20 +23,47 @@ export function OrderingExerciseComponent({ exercise, progress, onSelfGrade, onA
     }
     return shuffled;
   });
-  const [submitted, setSubmitted] = useState(progress?.status === "completed" || progress?.status === "attempted");
+  const [submitted, setSubmitted] = useState(progress?.status === "completed");
   const [results, setResults] = useState<boolean[] | null>(null);
   const [dragging, setDragging] = useState<number | null>(null);
-  const [dragOver, setDragOver] = useState<number | null>(null);
+  const dragIndexRef = useRef<number | null>(null);
 
-  const moveItem = useCallback((from: number, to: number) => {
-    if (to < 0 || to >= items.length) return;
-    setItems((prev) => {
-      const next = [...prev];
-      const [removed] = next.splice(from, 1);
-      next.splice(to, 0, removed);
-      return next;
+  // FLIP animation refs
+  const itemEls = useRef<Map<string, HTMLDivElement>>(new Map());
+  const prevRects = useRef<Map<string, DOMRect>>(new Map());
+
+  const capturePositions = useCallback(() => {
+    const rects = new Map<string, DOMRect>();
+    itemEls.current.forEach((el, key) => {
+      rects.set(key, el.getBoundingClientRect());
     });
-  }, [items.length]);
+    prevRects.current = rects;
+  }, []);
+
+  // After React re-renders with new item order, animate from old positions
+  useLayoutEffect(() => {
+    if (prevRects.current.size === 0) return;
+
+    itemEls.current.forEach((el, key) => {
+      const prev = prevRects.current.get(key);
+      if (!prev) return;
+      const curr = el.getBoundingClientRect();
+      const dy = prev.top - curr.top;
+      if (Math.abs(dy) < 1) return;
+
+      el.style.transition = "none";
+      el.style.transform = `translateY(${dy}px)`;
+
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          el.style.transition = "transform 200ms cubic-bezier(0.2, 0, 0, 1)";
+          el.style.transform = "";
+        });
+      });
+    });
+
+    prevRects.current.clear();
+  }, [items]);
 
   function handleSubmit() {
     const res = items.map((item, i) => item === ex.items[i]);
@@ -47,32 +74,52 @@ export function OrderingExerciseComponent({ exercise, progress, onSelfGrade, onA
   }
 
   function handleDragStart(e: React.DragEvent, index: number) {
+    dragIndexRef.current = index;
     setDragging(index);
     e.dataTransfer.effectAllowed = "move";
-    e.dataTransfer.setData("text/plain", String(index));
   }
 
   function handleDragOver(e: React.DragEvent, index: number) {
     e.preventDefault();
     e.dataTransfer.dropEffect = "move";
-    setDragOver(index);
+    if (dragIndexRef.current === null || dragIndexRef.current === index) return;
+
+    // Midpoint check: only swap when cursor crosses the vertical center
+    // of the target element — prevents the flicker feedback loop
+    const rect = e.currentTarget.getBoundingClientRect();
+    const midY = rect.top + rect.height / 2;
+    const from = dragIndexRef.current;
+    if (from < index && e.clientY < midY) return;
+    if (from > index && e.clientY > midY) return;
+
+    capturePositions();
+    setItems((prev) => {
+      const next = [...prev];
+      const [removed] = next.splice(from, 1);
+      next.splice(index, 0, removed);
+      return next;
+    });
+    dragIndexRef.current = index;
+    setDragging(index);
   }
 
-  function handleDrop(e: React.DragEvent, targetIndex: number) {
+  function handleDrop(e: React.DragEvent) {
     e.preventDefault();
-    const fromIndex = Number(e.dataTransfer.getData("text/plain"));
-    if (!isNaN(fromIndex) && fromIndex !== targetIndex) {
-      moveItem(fromIndex, targetIndex);
-    }
+    dragIndexRef.current = null;
     setDragging(null);
-    setDragOver(null);
   }
+
+  const setItemRef = useCallback((item: string, el: HTMLDivElement | null) => {
+    if (el) {
+      itemEls.current.set(item, el);
+    } else {
+      itemEls.current.delete(item);
+    }
+  }, []);
 
   return (
     <div>
-      <div className="text-[13px] text-zinc-400 leading-relaxed mb-4 [&_p]:mb-1.5 [&_p:last-child]:mb-0 [&_code]:bg-zinc-800/60 [&_code]:text-zinc-300 [&_code]:px-1 [&_code]:py-0.5 [&_code]:rounded [&_code]:text-[12px]">
-        <ReactMarkdown>{ex.prompt}</ReactMarkdown>
-      </div>
+      <ExercisePrompt>{ex.prompt}</ExercisePrompt>
 
       {!submitted && (
         <p className="text-[11px] text-zinc-600 mb-2">Drag to reorder:</p>
@@ -87,20 +134,19 @@ export function OrderingExerciseComponent({ exercise, progress, onSelfGrade, onA
               : "border-red-900/50 bg-red-950/20";
           }
           const isDragging = dragging === i;
-          const isDragOver = dragOver === i && dragging !== i;
 
           return (
             <div
-              key={`${item}-${i}`}
-              className={`flex items-center gap-3 px-3 py-2 rounded border ${itemBg} transition-all ${
+              key={item}
+              ref={(el) => setItemRef(item, el)}
+              className={`relative flex items-center gap-3 px-3 py-2 rounded border ${itemBg} ${
                 !submitted ? "cursor-grab active:cursor-grabbing" : ""
-              } ${isDragging ? "opacity-40" : ""} ${isDragOver ? "border-zinc-500" : ""}`}
+              } ${isDragging ? "opacity-50 scale-[1.03] shadow-lg shadow-black/25 z-10 ring-1 ring-zinc-600" : ""}`}
               draggable={!submitted}
               onDragStart={(e) => handleDragStart(e, i)}
               onDragOver={(e) => handleDragOver(e, i)}
-              onDrop={(e) => handleDrop(e, i)}
-              onDragEnd={() => { setDragging(null); setDragOver(null); }}
-              onDragLeave={() => dragOver === i && setDragOver(null)}
+              onDrop={handleDrop}
+              onDragEnd={() => { dragIndexRef.current = null; setDragging(null); }}
             >
               {!submitted && (
                 <svg width="10" height="14" viewBox="0 0 10 14" fill="currentColor" className="text-zinc-700 shrink-0">
@@ -150,16 +196,31 @@ export function OrderingExerciseComponent({ exercise, progress, onSelfGrade, onA
               : `${results.filter(Boolean).length}/${results.length} in the correct position.`}
           </p>
           {!results.every(Boolean) && (
-            <button
-              onClick={() => onAnswerInChat(exercise)}
-              className="text-[11px] text-zinc-600 hover:text-zinc-400 transition-colors"
-            >
-              Still stuck? Discuss in chat &rarr;
-            </button>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => {
+                  setSubmitted(false);
+                  setResults(null);
+                  const shuffled = shuffle(ex.items);
+                  if (shuffled.every((s, i) => s === ex.items[i]) && shuffled.length > 1) {
+                    [shuffled[0], shuffled[1]] = [shuffled[1], shuffled[0]];
+                  }
+                  setItems(shuffled);
+                }}
+                className="text-[12px] px-4 py-1.5 rounded border border-zinc-700 text-zinc-400 hover:text-zinc-200 hover:border-zinc-500 transition-colors"
+              >
+                Try again
+              </button>
+              <button
+                onClick={() => onAnswerInChat(exercise)}
+                className="text-[11px] text-zinc-600 hover:text-zinc-400 transition-colors"
+              >
+                Still stuck? Discuss in chat &rarr;
+              </button>
+            </div>
           )}
         </div>
       )}
     </div>
   );
 }
-
