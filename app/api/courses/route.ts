@@ -15,7 +15,7 @@ import {
   buildInitialLessonContentPrompt,
   buildExerciseGenerationPrompt,
 } from "@/lib/agents";
-import { research, generateStructured, generateMarkdown, generateExercisesJson, reviewContent } from "@/lib/ai";
+import { research, generateStructured, generateMarkdown, generateExercisesJson, reviewContent, enhanceLessonTitles } from "@/lib/ai";
 import { coursePlanSchema } from "@/lib/schemas";
 import { processMarkdownVisuals } from "@/lib/image-gen";
 import { normalizeExercises } from "@/lib/exercises";
@@ -113,6 +113,22 @@ export async function POST(req: Request) {
           send({ error: msg });
           controller.close();
           return;
+        }
+
+        // ── Step 2.5: Polish lesson titles with Gemini Flash ──
+
+        send({ step: "generating", message: "Polishing lesson titles..." });
+        try {
+          const enhanced = await enhanceLessonTitles(
+            plan.title,
+            plan.lessons.map((l, i) => ({ number: l.number || i + 1, title: l.title }))
+          );
+          for (let i = 0; i < plan.lessons.length; i++) {
+            plan.lessons[i].title = enhanced[i];
+          }
+          log.info("lesson titles polished");
+        } catch (err) {
+          log.info("title enhancement failed, keeping originals", { error: err instanceof Error ? err.message : err });
         }
 
         // ── Step 3: Write manifest BEFORE content generation ──
