@@ -1,4 +1,5 @@
 import { createAnthropic } from "@ai-sdk/anthropic";
+import { createGoogleGenerativeAI } from "@ai-sdk/google";
 import { streamText, generateText, Output, stepCountIs } from "ai";
 import { z } from "zod";
 import { createLogger } from "./logger";
@@ -351,5 +352,44 @@ export async function generateExercisesJson({
   }
 
   return parsed;
+}
+
+/**
+ * Rewrites lesson titles to be catchier using Gemini Flash.
+ * Best-effort — returns original titles on any failure.
+ */
+export async function enhanceLessonTitles(
+  courseTitle: string,
+  lessons: { number: number; title: string }[]
+): Promise<string[]> {
+  const originals = lessons.map((l) => l.title);
+
+  try {
+    const google = createGoogleGenerativeAI({
+      apiKey: process.env.GOOGLE_AI_API_KEY!,
+    });
+
+    const { text } = await generateText({
+      model: google("gemini-2.0-flash"),
+      prompt: `Rewrite these lesson titles for a course called "${courseTitle}". Make them catchier and more engaging, 3-7 words each. Keep the original meaning. Return ONLY a JSON array of strings, no markdown fences.\n\nOriginal titles:\n${lessons.map((l) => `${l.number}. ${l.title}`).join("\n")}`,
+    });
+
+    let cleaned = text.trim();
+    if (cleaned.startsWith("```")) {
+      cleaned = cleaned.replace(/^```(?:json)?\n?/, "").replace(/\n?```$/, "");
+    }
+
+    const parsed = JSON.parse(cleaned);
+    if (!Array.isArray(parsed) || parsed.length !== lessons.length) {
+      log.info("enhanced titles length mismatch", { expected: lessons.length, got: parsed?.length });
+      return originals;
+    }
+
+    log.info("lesson titles enhanced", { count: parsed.length });
+    return parsed.map((t: unknown) => (typeof t === "string" ? t : String(t)));
+  } catch (err) {
+    log.info("enhance lesson titles failed, keeping originals", { error: err instanceof Error ? err.message : err });
+    return originals;
+  }
 }
 
