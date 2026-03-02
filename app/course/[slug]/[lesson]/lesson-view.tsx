@@ -54,6 +54,7 @@ export function LessonView({
   const [preparingNext, setPreparingNext] = useState(false);
   const [liveExercises, setLiveExercises] = useState<Exercise[]>(exercises);
   const [liveProgress, setLiveProgress] = useState<Record<number, ExerciseProgress>>(exerciseProgress);
+  const [readingProgress, setReadingProgress] = useState(0);
 
   useEffect(() => {
     setLiveProgress((prev) => ({ ...prev, ...exerciseProgress }));
@@ -61,6 +62,14 @@ export function LessonView({
 
   const allExercisesDone = liveExercises.length > 0 &&
     liveExercises.every((ex) => liveProgress[ex.id]);
+
+  const hasExercises = liveExercises.length > 0;
+  const exerciseRatio = hasExercises
+    ? liveExercises.filter((ex) => liveProgress[ex.id]).length / liveExercises.length
+    : 0;
+  const totalProgress = hasExercises
+    ? readingProgress * 0.8 + exerciseRatio * 0.2
+    : readingProgress;
 
   // Persist and restore scroll position
   const scrollKey = `scroll:${courseSlug}/${lessonNumber}`;
@@ -82,10 +91,22 @@ export function LessonView({
       if (ticking) return;
       ticking = true;
       requestAnimationFrame(() => {
-        const y = chatOpen
-          ? scrollRef.current?.scrollTop ?? 0
-          : window.scrollY;
+        let y: number;
+        let ratio = 0;
+        if (chatOpen) {
+          const el = scrollRef.current;
+          y = el?.scrollTop ?? 0;
+          if (el) {
+            const max = el.scrollHeight - el.clientHeight;
+            ratio = max > 0 ? Math.min(y / max, 1) : 1;
+          }
+        } else {
+          y = window.scrollY;
+          const max = document.documentElement.scrollHeight - window.innerHeight;
+          ratio = max > 0 ? Math.min(y / max, 1) : 1;
+        }
         sessionStorage.setItem(scrollKey, String(Math.round(y)));
+        setReadingProgress(ratio);
         ticking = false;
       });
     };
@@ -347,6 +368,7 @@ export function LessonView({
   if (chatOpen) {
     return (
       <div className="fixed inset-x-0 bottom-0 top-14 z-30 flex">
+        <LessonProgressBar progress={totalProgress} />
         <div ref={scrollRef} className="flex-1 min-w-0 overflow-y-auto">
           <div className="max-w-3xl mx-auto px-6 py-8 pb-24 xl:max-w-none xl:grid xl:grid-cols-[10rem_minmax(0,48rem)] xl:justify-center xl:gap-8">
             <aside className="hidden xl:block">
@@ -477,6 +499,7 @@ export function LessonView({
 
   return (
     <div className="mx-auto max-w-7xl px-6 mt-14 pb-16">
+      <LessonProgressBar progress={totalProgress} />
       <div className="max-w-3xl mx-auto xl:max-w-none xl:grid xl:grid-cols-[11rem_minmax(0,48rem)] xl:justify-center xl:gap-10">
         <aside className="hidden xl:block">
           <div className="sticky top-20">
@@ -767,6 +790,22 @@ function MissingExercises({
         </div>
       )}
     </section>
+  );
+}
+
+function LessonProgressBar({ progress }: { progress: number }) {
+  const pct = Math.min(Math.round(progress * 100), 100);
+  const done = pct >= 100;
+
+  return (
+    <div
+      className={`fixed top-14 left-0 right-0 z-40 h-[2px] transition-opacity duration-700 ${done ? "opacity-0 delay-1000" : "opacity-100"}`}
+    >
+      <div
+        className="h-full bg-zinc-500 transition-all duration-300"
+        style={{ width: `${pct}%` }}
+      />
+    </div>
   );
 }
 
