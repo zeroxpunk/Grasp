@@ -1,15 +1,5 @@
 import { serve } from '@hono/node-server'
-import { Hono } from 'hono'
-
-const app = new Hono()
-
-app.get('/', (c) => {
-  return c.json({ name: 'Grasp API', version: '0.1.0' })
-})
-
-app.get('/health', (c) => {
-  return c.json({ status: 'ok' })
-})
+import app from './app.js'
 
 const port = Number(process.env.PORT) || 4000
 
