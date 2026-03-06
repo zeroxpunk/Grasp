@@ -1,4 +1,5 @@
 export { users } from './users.js'
+export { authSessions } from './auth-sessions.js'
 export { courses } from './courses.js'
 export { lessons } from './lessons.js'
 export { jobs } from './jobs.js'

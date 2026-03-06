@@ -1,4 +1,5 @@
 export * as userQueries from './users.js'
+export * as authSessionQueries from './auth-sessions.js'
 export * as courseQueries from './courses.js'
 export * as lessonQueries from './lessons.js'
 export * as exerciseQueries from './exercises.js'
