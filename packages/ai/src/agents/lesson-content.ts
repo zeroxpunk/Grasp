@@ -38,6 +38,7 @@ export async function executeOnDemand(
   options?: ExecutionOptions & { webSearch?: boolean },
 ): Promise<string> {
   const { system, user } = buildOnDemandLessonPrompt(params);
+  const webSearch = options?.webSearch ? registry.webSearchTool() : null;
 
   return executeGenerateText({
     model: registry.resolve("primary"),
@@ -46,9 +47,7 @@ export async function executeOnDemand(
     maxOutputTokens: options?.maxOutputTokens,
     thinkingBudget: options?.thinkingBudget,
     onProgress: options?.onProgress,
-    ...(options?.webSearch
-      ? { tools: { web_search: registry.webSearchTool() }, maxSteps: 5 }
-      : {}),
+    ...(webSearch ? { tools: { web_search: webSearch }, maxSteps: 5 } : {}),
     label: "lesson-content:on-demand",
   });
 }

@@ -41,6 +41,12 @@ importers:
 
   apps/desktop:
     dependencies:
+      '@grasp/ai':
+        specifier: workspace:*
+        version: link:../../packages/ai
+      '@grasp/api-client':
+        specifier: workspace:*
+        version: link:../../packages/api-client
       react:
         specifier: ^19.0.0
         version: 19.2.3
@@ -169,6 +175,9 @@ importers:
       '@ai-sdk/google':
         specifier: ^3.0.31
         version: 3.0.34(zod@4.3.6)
+      '@ai-sdk/openai':
+        specifier: ^3.0.43
+        version: 3.0.43(zod@4.3.6)
       ai:
         specifier: ^6.0.99
         version: 6.0.105(zod@4.3.6)
@@ -228,8 +237,20 @@ packages:
     peerDependencies:
       zod: ^3.25.76 || ^4.1.8
 
+  '@ai-sdk/openai@3.0.43':
+    resolution: {integrity: sha512-G5pIruf+TgyWVC4guBtiCIGCzqN0uBRjnxGsCI3KP2zpmnnME3OeZ00e6C8dHYkYri0UNdGnbI37S3nVQYG0Ow==}
+    engines: {node: '>=18'}
+    peerDependencies:
+      zod: ^3.25.76 || ^4.1.8
+
   '@ai-sdk/provider-utils@4.0.16':
     resolution: {integrity: sha512-kBvDqNkt5EwlzF9FujmNhhtl8FYg3e8FO8P5uneKliqfRThWemzBj+wfYr7ZCymAQhTRnwSSz1/SOqhOAwmx9g==}
+    engines: {node: '>=18'}
+    peerDependencies:
+      zod: ^3.25.76 || ^4.1.8
+
+  '@ai-sdk/provider-utils@4.0.20':
+    resolution: {integrity: sha512-gpUIj9uDhIGbuo9afKEgQ074BWmhvK4THJAAeBjRnroTy2yQYo6rbtGD7pQDMZM8ouXPYmT/SCdkWVJ0KcpX8A==}
     engines: {node: '>=18'}
     peerDependencies:
       zod: ^3.25.76 || ^4.1.8
@@ -3675,7 +3696,20 @@ snapshots:
       '@ai-sdk/provider-utils': 4.0.16(zod@4.3.6)
       zod: 4.3.6
 
+  '@ai-sdk/openai@3.0.43(zod@4.3.6)':
+    dependencies:
+      '@ai-sdk/provider': 3.0.8
+      '@ai-sdk/provider-utils': 4.0.20(zod@4.3.6)
+      zod: 4.3.6
+
   '@ai-sdk/provider-utils@4.0.16(zod@4.3.6)':
+    dependencies:
+      '@ai-sdk/provider': 3.0.8
+      '@standard-schema/spec': 1.1.0
+      eventsource-parser: 3.0.6
+      zod: 4.3.6
+
+  '@ai-sdk/provider-utils@4.0.20(zod@4.3.6)':
     dependencies:
       '@ai-sdk/provider': 3.0.8
       '@standard-schema/spec': 1.1.0

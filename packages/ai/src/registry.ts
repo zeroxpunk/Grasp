@@ -1,69 +1,125 @@
 import { createAnthropic } from "@ai-sdk/anthropic";
 import { createGoogleGenerativeAI } from "@ai-sdk/google";
-import type { ImageModel, LanguageModel } from "ai";
+import { createOpenAI } from "@ai-sdk/openai";
+import { gateway, type ImageModel, type LanguageModel } from "ai";
+import { lazy } from "./shared/utils.js";
 
 export type ModelRole = "primary" | "research" | "fast";
+export type TextProviderKind = "anthropic" | "openai";
 
-const DEFAULT_MODELS: Record<ModelRole, string> = {
-  primary: "claude-opus-4-6",
-  research: "claude-sonnet-4-6",
-  fast: "gemini-2.0-flash",
+export type AnthropicTextProviderConfig = {
+  kind: "anthropic";
+  apiKey?: string;
+  authToken?: string;
 };
 
+export type OpenAITextProviderConfig = {
+  kind: "openai";
+  apiKey: string;
+  baseUrl?: string;
+};
+
+export type TextProviderConfig =
+  | AnthropicTextProviderConfig
+  | OpenAITextProviderConfig;
+
 export interface RegistryConfig {
-  anthropicApiKey: string;
+  textProvider: TextProviderConfig;
   googleApiKey?: string;
   models?: Partial<Record<ModelRole, string>>;
 }
 
-type AnthropicProvider = ReturnType<typeof createAnthropic>;
-type GoogleProvider = ReturnType<typeof createGoogleGenerativeAI>;
-type WebSearchTool = ReturnType<AnthropicProvider["tools"]["webSearch_20250305"]>;
+type LanguageProviderKind = TextProviderKind | "google";
+type WebSearchTool = ReturnType<typeof gateway.tools.perplexitySearch>;
 
 export interface ModelRegistry {
   resolve(role: ModelRole): LanguageModel;
   imageModel(modelId: string): ImageModel;
   webSearchTool(): WebSearchTool;
+  defaultModels(): Record<ModelRole, string>;
 }
 
+const DEFAULT_MODELS: Record<TextProviderKind, Record<ModelRole, string>> = {
+  anthropic: {
+    primary: "claude-opus-4-6",
+    research: "claude-sonnet-4-6",
+    fast: "claude-haiku-4-5",
+  },
+  openai: {
+    primary: "gpt-5.4",
+    research: "gpt-5.2",
+    fast: "gpt-5-mini",
+  },
+};
+
+const MODEL_PREFIXES: [prefix: string, provider: LanguageProviderKind][] = [
+  ["gemini", "google"],
+  ["claude", "anthropic"],
+  ["gpt", "openai"],
+  ["o1", "openai"],
+  ["o3", "openai"],
+  ["o4", "openai"],
+  ["computer-use", "openai"],
+  ["codex", "openai"],
+];
+
 export function createModelRegistry(config: RegistryConfig): ModelRegistry {
-  const modelIds = { ...DEFAULT_MODELS, ...config.models };
+  const modelIds = resolveModelIds(config);
 
-  let _anthropic: AnthropicProvider | null = null;
-  let _google: GoogleProvider | null = null;
-
-  function getAnthropic() {
-    if (!_anthropic) {
-      _anthropic = createAnthropic({ apiKey: config.anthropicApiKey });
+  const getAnthropic = lazy(() => {
+    if (config.textProvider.kind !== "anthropic") {
+      throw new Error("Anthropic model requested but no Anthropic API key configured");
     }
-    return _anthropic;
-  }
+    const { authToken, apiKey } = config.textProvider;
+    return createAnthropic(authToken ? { authToken } : { apiKey: apiKey! });
+  });
 
-  function getGoogle() {
-    if (!_google) {
-      if (!config.googleApiKey) {
-        throw new Error("Google API key required for 'fast' model role");
-      }
-      _google = createGoogleGenerativeAI({ apiKey: config.googleApiKey });
+  const getGoogle = lazy(() => {
+    if (!config.googleApiKey) {
+      throw new Error("Google API key required");
     }
-    return _google;
+    return createGoogleGenerativeAI({ apiKey: config.googleApiKey });
+  });
+
+  const getOpenAI = lazy(() => {
+    if (config.textProvider.kind !== "openai") {
+      throw new Error("OpenAI model requested but no OpenAI API key configured");
+    }
+    return createOpenAI({
+      apiKey: config.textProvider.apiKey,
+      ...(config.textProvider.baseUrl ? { baseURL: config.textProvider.baseUrl } : {}),
+    });
+  });
+
+  function detectProvider(modelId: string): LanguageProviderKind {
+    return MODEL_PREFIXES.find(([p]) => modelId.startsWith(p))?.[1] ?? config.textProvider.kind;
   }
 
   return {
-    resolve(role: ModelRole): LanguageModel {
+    resolve(role) {
       const id = modelIds[role];
-      if (role === "fast" && id.startsWith("gemini")) {
-        return getGoogle()(id);
+
+      switch (detectProvider(id)) {
+        case "anthropic": return getAnthropic()(id);
+        case "google":    return getGoogle()(id);
+        case "openai":    return getOpenAI()(id);
       }
-      return getAnthropic()(id);
     },
 
-    imageModel(modelId: string): ImageModel {
+    imageModel(modelId) {
       return getGoogle().image(modelId);
     },
 
     webSearchTool() {
-      return getAnthropic().tools.webSearch_20250305();
+      return gateway.tools.perplexitySearch();
+    },
+
+    defaultModels() {
+      return { ...modelIds };
     },
   };
+}
+
+function resolveModelIds(config: RegistryConfig): Record<ModelRole, string> {
+  return { ...DEFAULT_MODELS[config.textProvider.kind], ...config.models };
 }

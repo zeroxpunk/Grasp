@@ -118,7 +118,15 @@ export { createLogger } from "./shared/logger.js";
 export { streamEventsToSSE } from "./execution.js";
 
 export { createModelRegistry } from "./registry.js";
-export type { ModelRole, RegistryConfig, ModelRegistry } from "./registry.js";
+export type {
+  ModelRole,
+  RegistryConfig,
+  ModelRegistry,
+  TextProviderKind,
+  TextProviderConfig,
+  AnthropicTextProviderConfig,
+  OpenAITextProviderConfig,
+} from "./registry.js";
 
 export type { ResearchParams } from "./agents/research.js";
 export type { CoursePlanParams } from "./agents/course-plan.js";
@@ -128,5 +136,22 @@ export type { EvaluationParams } from "./agents/evaluation.js";
 export type { TutorParams, TutorCallbacks } from "./agents/tutor.js";
 export type { TitleEnhancementParams } from "./agents/title-enhancement.js";
 export type { ImageGenerationParams, GeneratedImage } from "./agents/image-generation.js";
+
+export {
+  runCourseCreationPipeline,
+  type CourseCreationInput,
+  type CourseCreationPipelineOutput,
+} from "./pipelines/create-course.js";
+
+export {
+  runLessonGenerationPipeline,
+  type LessonGenerationInput,
+  type LessonGenerationOutput,
+} from "./pipelines/generate-lesson.js";
+
+export {
+  runExerciseGenerationPipeline,
+  type ExerciseGenerationInput,
+} from "./pipelines/generate-exercises.js";
 
 export * from "./prompts/index.js";

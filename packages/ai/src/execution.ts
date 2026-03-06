@@ -6,15 +6,40 @@ import { createLogger } from "./shared/logger.js";
 
 const log = createLogger("execution");
 
-function thinkingOptions(budget?: number) {
-  if (!budget) return {};
-  return {
-    providerOptions: {
+type JSONValue = string | number | boolean | null | JSONValue[] | { [k: string]: JSONValue };
+type ProviderOptions = Record<string, Record<string, JSONValue>>;
+
+function budgetToReasoningEffort(budget: number): "low" | "medium" | "high" {
+  if (budget <= 4096) return "low";
+  if (budget <= 16384) return "medium";
+  return "high";
+}
+
+function resolveProviderOptions(
+  model: LanguageModel,
+  budget?: number,
+): ProviderOptions | undefined {
+  if (!budget) return undefined;
+
+  const provider = getModelProvider(model);
+
+  if (provider?.startsWith("anthropic")) {
+    return {
       anthropic: {
-        thinking: { type: "enabled" as const, budgetTokens: budget },
+        thinking: { type: "enabled", budgetTokens: budget },
       },
-    },
-  };
+    };
+  }
+
+  if (provider?.startsWith("openai")) {
+    return {
+      openai: {
+        reasoningEffort: budgetToReasoningEffort(budget),
+      },
+    };
+  }
+
+  return undefined;
 }
 
 export async function executeGenerateText(opts: {
@@ -29,7 +54,7 @@ export async function executeGenerateText(opts: {
   label?: string;
 }): Promise<string> {
   const stop = log.time(opts.label || "generateText");
-  const thinking = thinkingOptions(opts.thinkingBudget);
+  const providerOptions = resolveProviderOptions(opts.model, opts.thinkingBudget);
   const toolOpts = opts.tools
     ? { tools: opts.tools, stopWhen: stepCountIs(opts.maxSteps || 5) }
     : {};
@@ -40,7 +65,7 @@ export async function executeGenerateText(opts: {
       ...(opts.system ? { system: opts.system } : {}),
       prompt: opts.prompt,
       maxOutputTokens: opts.maxOutputTokens,
-      ...thinking,
+      ...(providerOptions ? { providerOptions } : {}),
       ...toolOpts,
     });
 
@@ -65,7 +90,7 @@ export async function executeGenerateText(opts: {
     ...(opts.system ? { system: opts.system } : {}),
     prompt: opts.prompt,
     maxOutputTokens: opts.maxOutputTokens,
-    ...thinking,
+    ...(providerOptions ? { providerOptions } : {}),
     ...toolOpts,
   });
 
@@ -87,7 +112,7 @@ export async function executeGenerateStructured<T>(opts: {
   label?: string;
 }): Promise<T> {
   const stop = log.time(opts.label || "structured");
-  const thinking = thinkingOptions(opts.thinkingBudget);
+  const providerOptions = resolveProviderOptions(opts.model, opts.thinkingBudget);
 
   log.info(`generating structured: ${opts.label || opts.schemaName || "unnamed"}`, {
     thinkingBudget: opts.thinkingBudget,
@@ -100,7 +125,7 @@ export async function executeGenerateStructured<T>(opts: {
       system: opts.system,
       prompt: opts.prompt,
       maxOutputTokens: opts.maxOutputTokens,
-      ...thinking,
+      ...(providerOptions ? { providerOptions } : {}),
       output: Output.object({
         schema: opts.schema,
         name: opts.schemaName,
@@ -128,7 +153,7 @@ export async function executeGenerateStructured<T>(opts: {
     system: opts.system,
     prompt: opts.prompt,
     maxOutputTokens: opts.maxOutputTokens,
-    ...thinking,
+    ...(providerOptions ? { providerOptions } : {}),
     output: Output.object({
       schema: opts.schema,
       name: opts.schemaName,
@@ -151,14 +176,14 @@ export async function executeGenerateJson(opts: {
   label?: string;
 }): Promise<unknown[]> {
   const stop = log.time(opts.label || "json");
-  const thinking = thinkingOptions(opts.thinkingBudget);
+  const providerOptions = resolveProviderOptions(opts.model, opts.thinkingBudget);
 
   const result = await generateText({
     model: opts.model,
     system: opts.system + "\n\nIMPORTANT: Output ONLY a JSON array. No markdown fences, no explanation, no preamble. Just the raw JSON array.",
     prompt: opts.prompt,
     maxOutputTokens: opts.maxOutputTokens,
-    ...thinking,
+    ...(providerOptions ? { providerOptions } : {}),
   });
 
   let text = result.text.trim();
@@ -182,6 +207,22 @@ export async function executeGenerateJson(opts: {
   }
 
   return parsed;
+}
+
+function getModelProvider(model: LanguageModel) {
+  if (typeof model !== "object" || model === null) {
+    return null;
+  }
+
+  if (isProviderModel(model)) {
+    return model.provider;
+  }
+
+  return null;
+}
+
+function isProviderModel(model: object): model is { provider: string } {
+  return "provider" in model && typeof (model as { provider?: unknown }).provider === "string";
 }
 
 export function streamEventsToSSE(events: AsyncIterable<StreamEvent>): ReadableStream {

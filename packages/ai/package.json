@@ -9,6 +9,7 @@
   "dependencies": {
     "@ai-sdk/anthropic": "^3.0.47",
     "@ai-sdk/google": "^3.0.31",
+    "@ai-sdk/openai": "^3.0.43",
     "ai": "^6.0.99",
     "zod": "^4.3.6"
   },

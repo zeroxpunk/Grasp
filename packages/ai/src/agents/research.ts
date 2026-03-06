@@ -10,13 +10,13 @@ export async function execute(
   params: ResearchParams,
 ): Promise<string> {
   const { system, user } = buildResearchPrompt(params);
+  const webSearch = registry.webSearchTool();
 
   return executeGenerateText({
     model: registry.resolve("research"),
     system,
     prompt: user,
-    tools: { web_search: registry.webSearchTool() },
-    maxSteps: 5,
+    ...(webSearch ? { tools: { web_search: webSearch }, maxSteps: 5 } : {}),
     label: "research",
   });
 }
