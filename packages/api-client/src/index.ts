@@ -9,6 +9,7 @@ import { ImagesResource } from './resources/images.js'
 import { InsightsResource } from './resources/insights.js'
 import { JobsResource } from './resources/jobs.js'
 import { UserResource } from './resources/user.js'
+import { ImportResource } from './resources/import.js'
 import type { ClientConfig } from './types.js'
 
 export class GraspClient {
@@ -24,6 +25,7 @@ export class GraspClient {
   readonly insights: InsightsResource
   readonly jobs: JobsResource
   readonly user: UserResource
+  readonly import: ImportResource
 
   constructor(config: ClientConfig) {
     this.http = new GraspHttpClient(config)
@@ -37,6 +39,7 @@ export class GraspClient {
     this.insights = new InsightsResource(this.http)
     this.jobs = new JobsResource(this.http)
     this.user = new UserResource(this.http)
+    this.import = new ImportResource(this.http)
   }
 }
 

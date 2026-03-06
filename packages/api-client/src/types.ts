@@ -196,6 +196,23 @@ export interface PollOptions {
   signal?: AbortSignal
 }
 
+export interface ImportCourseRequest {
+  title: string
+  description: string
+  context: string
+  memory: string
+  lessons: Array<{
+    number: number
+    title: string
+    slug: string
+    concepts: string[]
+  }>
+}
+
+export interface ImportCourseResponse {
+  courseSlug: string
+}
+
 export interface ClientConfig {
   baseUrl: string
   token?: string | (() => string | Promise<string>)

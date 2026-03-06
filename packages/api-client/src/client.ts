@@ -76,6 +76,10 @@ export class GraspHttpClient {
     return this.request<T>('POST', path, body, signal)
   }
 
+  put<T>(path: string, body?: unknown, signal?: AbortSignal): Promise<T> {
+    return this.request<T>('PUT', path, body, signal)
+  }
+
   patch<T>(path: string, body?: unknown, signal?: AbortSignal): Promise<T> {
     return this.request<T>('PATCH', path, body, signal)
   }
