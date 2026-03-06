@@ -1,17 +1,15 @@
-import { createAI, type GraspAI } from '@grasp/ai'
+import { createAI, type GraspAI, type RegistryConfig } from '@grasp/ai'
+import { resolveBackendAiConfig } from '../utils/ai-config.js'
 
 let ai: GraspAI | null = null
+let aiConfigKey: string | null = null
 
-export function getAI() {
-  if (!process.env.ANTHROPIC_API_KEY) {
-    throw new Error('ANTHROPIC_API_KEY environment variable is required')
-  }
+export function getAI(config: RegistryConfig = resolveBackendAiConfig()) {
+  const nextKey = JSON.stringify(config)
 
-  if (!ai) {
-    ai = createAI({
-      anthropicApiKey: process.env.ANTHROPIC_API_KEY,
-      googleApiKey: process.env.GOOGLE_AI_API_KEY,
-    })
+  if (!ai || aiConfigKey !== nextKey) {
+    ai = createAI(config)
+    aiConfigKey = nextKey
   }
 
   return ai

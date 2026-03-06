@@ -1,6 +1,11 @@
 import type { Exercise } from '@grasp/ai'
+import {
+  runCourseCreationPipeline,
+  runLessonGenerationPipeline,
+  runExerciseGenerationPipeline,
+} from '@grasp/ai'
 import { courseQueries, lessonQueries, masteryQueries, userQueries } from '@grasp/db'
-import type { CourseRow, LessonRow, UserRow } from '../lib/db-types.js'
+import type { CourseRow, LessonRow } from '../lib/db-types.js'
 import * as courseService from './course-service.js'
 import * as exerciseService from './exercise-service.js'
 import * as imageService from './image-service.js'
@@ -42,14 +47,6 @@ function createUniqueSlug(baseSlug: string, used: Set<string>) {
   return slug
 }
 
-function toCoursePlanLessons(lessons: Array<{ number: number; title: string; concepts: string[] }>) {
-  return lessons.map((lesson) => ({
-    number: lesson.number,
-    title: lesson.title,
-    concepts: lesson.concepts,
-  }))
-}
-
 async function loadCourseContext(courseId: string): Promise<{
   course: CourseRow
   manifest: CourseManifestRecord
@@ -83,22 +80,6 @@ async function loadLessonContext(courseId: string, lessonNumber: number): Promis
   return { course, manifest, lesson }
 }
 
-async function loadGenerationContext(courseId: string, lessonNumber: number): Promise<{
-  course: CourseRow
-  manifest: CourseManifestRecord
-  lesson: LessonRow
-  user: UserRow
-}> {
-  const { course, manifest, lesson } = await loadLessonContext(courseId, lessonNumber)
-  const user = await userQueries.findById(course.userId)
-
-  if (!user) {
-    throw new Error('User not found')
-  }
-
-  return { course, manifest, lesson, user }
-}
-
 async function seedMastery(courseId: string, lessons: Array<{ concepts: string[] }>) {
   const concepts = new Set<string>()
 
@@ -113,57 +94,7 @@ async function seedMastery(courseId: string, lessons: Array<{ concepts: string[]
   )
 }
 
-async function generateExercisesForLesson(
-  course: CourseRow,
-  manifest: CourseManifestRecord,
-  lesson: Pick<LessonRow, 'id' | 'number' | 'title' | 'concepts'>,
-  lessonContent: string,
-  options?: { maxOutputTokens?: number; thinkingBudget?: number },
-): Promise<Exercise[]> {
-  const exercises = await getAI().generateExercises({
-    lessonTitle: lesson.title,
-    concepts: lesson.concepts,
-    lessonContent,
-    lessonNumber: lesson.number,
-    totalLessons: manifest.lessons.length,
-    mastery: manifest.mastery,
-    courseTitle: manifest.title,
-    courseDescription: manifest.description,
-    courseMemory: course.memory,
-  }, options)
-
-  await exerciseService.replaceExercises(lesson.id, exercises)
-  return exercises
-}
-
-async function generateExercisesBestEffort(
-  course: CourseRow,
-  manifest: CourseManifestRecord,
-  lesson: Pick<LessonRow, 'id' | 'number' | 'title' | 'concepts'>,
-  lessonContent: string,
-  logLabel: string,
-  options?: { maxOutputTokens?: number; thinkingBudget?: number },
-) {
-  try {
-    const exercises = await generateExercisesForLesson(
-      course,
-      manifest,
-      lesson,
-      lessonContent,
-      options,
-    )
-
-    return exercises.length
-  } catch (err) {
-    console.error(
-      `[learning-service] ${logLabel}:`,
-      err instanceof Error ? err.message : err,
-    )
-    return 0
-  }
-}
-
-async function createCourseLessons(
+export async function createCourseLessons(
   courseId: string,
   lessons: Array<{ number: number; slug: string; title: string; concepts: string[] }>,
   enhancedTitles: string[],
@@ -192,35 +123,22 @@ export async function createCourse(
     throw new Error('User not found')
   }
 
-  const ai = getAI()
   const cachedResearch = await getCachedResearch(description, context)
-  const researchMaterials = cachedResearch ?? await ai.research({ description, context })
 
-  if (!cachedResearch) {
-    await cacheResearch(description, context, researchMaterials)
-  }
-
-  const plan = await ai.planCourse({
+  const pipelineResult = await runCourseCreationPipeline(getAI(), {
     description,
-    researchMaterials,
     context,
     globalMemory: user.globalMemory,
-  }, {
-    maxOutputTokens: 32768,
-    thinkingBudget: 16384,
+    cachedResearch: cachedResearch ?? undefined,
   })
 
-  const enhancedTitles = await ai.enhanceTitles({
-    courseTitle: plan.title,
-    lessons: plan.lessons.map((lesson, index) => ({
-      number: lesson.number || index + 1,
-      title: lesson.title,
-    })),
-  })
+  if (!cachedResearch) {
+    await cacheResearch(description, context, pipelineResult.research)
+  }
 
   const slug = await courseService.ensureUniqueSlug(
     userId,
-    sanitizeSlug(plan.slug || plan.title),
+    sanitizeSlug(pipelineResult.plan.slug || pipelineResult.plan.title),
   )
 
   let courseId: string | null = null
@@ -229,15 +147,19 @@ export async function createCourse(
     const course = await courseQueries.insert({
       userId,
       slug,
-      title: plan.title,
-      description: plan.description,
+      title: pipelineResult.plan.title,
+      description: pipelineResult.plan.description,
       context: context ?? '',
-      memory: ai.prompts.courseMemory(plan.title),
+      memory: pipelineResult.courseMemory,
       generationStatus: 'running',
     })
     courseId = course.id
 
-    const lessonRows = await createCourseLessons(course.id, plan.lessons, enhancedTitles)
+    const lessonRows = await createCourseLessons(
+      course.id,
+      pipelineResult.plan.lessons,
+      pipelineResult.enhancedTitles,
+    )
     await seedMastery(course.id, lessonRows)
 
     const firstLesson = lessonRows.find((lesson) => lesson.number === 1) ?? lessonRows[0]
@@ -245,43 +167,16 @@ export async function createCourse(
       throw new Error('Generated course plan contained no lessons')
     }
 
-    const rawContent = await ai.generateInitialLessonContent({
-      description,
-      researchMaterials,
-      context: context ?? null,
-      globalMemory: user.globalMemory,
-      coursePlan: {
-        title: plan.title,
-        description: plan.description,
-        lessons: toCoursePlanLessons(lessonRows),
-      },
-      lessonNumber: firstLesson.number,
-      lessonTitle: firstLesson.title,
-      concepts: firstLesson.concepts,
-    }, {
-      maxOutputTokens: 65536,
-      thinkingBudget: 32768,
-    })
-
-    const reviewedContent = await ai.reviewContent(
-      { content: rawContent },
-      { thinkingBudget: 10000 },
+    const content = await imageService.processMarkdownVisuals(
+      pipelineResult.firstLessonContent,
+      course.id,
+      slug,
     )
-    const content = await imageService.processMarkdownVisuals(reviewedContent, course.id, slug)
     await lessonQueries.updateContent(firstLesson.id, content)
-    const { manifest } = await loadCourseContext(course.id)
 
-    await generateExercisesBestEffort(
-      course,
-      manifest,
-      firstLesson,
-      content,
-      'initial exercise generation failed',
-      {
-        maxOutputTokens: 32768,
-        thinkingBudget: 10000,
-      },
-    )
+    if (pipelineResult.firstLessonExercises.length > 0) {
+      await exerciseService.replaceExercises(firstLesson.id, pipelineResult.firstLessonExercises)
+    }
 
     await courseQueries.updateStatus(course.id, 'completed', null)
 
@@ -307,44 +202,39 @@ export async function generateLesson(
   courseId: string,
   lessonNumber: number,
 ): Promise<LessonGenerationResult> {
-  const { course, manifest, lesson, user } = await loadGenerationContext(courseId, lessonNumber)
-  const ai = getAI()
+  const { course, manifest, lesson } = await loadLessonContext(courseId, lessonNumber)
+  const user = await userQueries.findById(course.userId)
+  if (!user) {
+    throw new Error('User not found')
+  }
 
   await lessonQueries.updateGenerationStatus(lesson.id, 'running', null)
 
   try {
-    const rawContent = await ai.generateLessonContent({
+    const result = await runLessonGenerationPipeline(getAI(), {
       manifest,
       globalMemory: user.globalMemory,
       courseMemory: course.memory,
       courseContext: course.context,
       lessonNumber,
-    }, {
-      webSearch: true,
     })
 
-    const reviewedContent = await ai.reviewContent(
-      { content: rawContent },
-      { thinkingBudget: 10000 },
-    )
     const content = await imageService.processMarkdownVisuals(
-      reviewedContent,
+      result.content,
       course.id,
       course.slug,
     )
     await lessonQueries.updateContent(lesson.id, content)
-    const exerciseCount = await generateExercisesBestEffort(
-      course,
-      manifest,
-      lesson,
-      content,
-      'exercise generation failed',
-    )
+
+    if (result.exercises.length > 0) {
+      await exerciseService.replaceExercises(lesson.id, result.exercises)
+    }
+
     await lessonQueries.updateGenerationStatus(lesson.id, 'completed', null)
 
     return {
       lessonNumber,
-      exerciseCount,
+      exerciseCount: result.exercises.length,
     }
   } catch (err) {
     await lessonQueries.updateGenerationStatus(
@@ -366,7 +256,16 @@ export async function regenerateExercises(
     throw new Error('Lesson content has not been generated yet')
   }
 
-  const exercises = await generateExercisesForLesson(course, manifest, lesson, lesson.content)
+  const exercises = await runExerciseGenerationPipeline(getAI(), {
+    manifest,
+    courseMemory: course.memory,
+    lessonNumber,
+    lessonTitle: lesson.title,
+    concepts: lesson.concepts,
+    lessonContent: lesson.content,
+  })
+
+  await exerciseService.replaceExercises(lesson.id, exercises)
 
   return {
     lessonNumber,

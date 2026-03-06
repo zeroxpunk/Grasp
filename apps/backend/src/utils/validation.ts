@@ -7,6 +7,11 @@ export function parsePositiveInteger(raw: string): number | null {
   return Number.isInteger(value) && value > 0 ? value : null
 }
 
+export function parsePositiveIntegerOr(raw: string | undefined, fallback: number) {
+  if (!raw) return fallback
+  return parsePositiveInteger(raw) ?? fallback
+}
+
 export function requireNonEmptyString(value: unknown): string | null {
   if (typeof value !== 'string') return null
 
