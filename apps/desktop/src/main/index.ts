@@ -1,5 +1,8 @@
 import { app, BrowserWindow } from 'electron'
 import path from 'node:path'
+import { registerAiAuthIpc } from './ai-auth/ipc'
+import { AiAuthService } from './ai-auth/service'
+import { registerAiIpc } from './ai/ipc'
 
 function createWindow() {
   const win = new BrowserWindow({
@@ -17,11 +20,16 @@ function createWindow() {
   if (process.env.VITE_DEV_SERVER_URL) {
     win.loadURL(process.env.VITE_DEV_SERVER_URL)
   } else {
-    win.loadFile(path.join(__dirname, 'renderer', 'index.html'))
+    win.loadFile(path.join(__dirname, '..', 'renderer', 'index.html'))
   }
 }
 
-app.whenReady().then(createWindow)
+app.whenReady().then(() => {
+  const aiAuthService = new AiAuthService()
+  registerAiAuthIpc(aiAuthService)
+  registerAiIpc()
+  createWindow()
+})
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit()

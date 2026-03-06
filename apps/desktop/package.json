@@ -2,13 +2,15 @@
   "name": "@grasp/desktop",
   "version": "0.1.0",
   "private": true,
-  "main": "dist/main.js",
+  "main": "dist/main/index.js",
   "scripts": {
     "dev": "node scripts/dev.mjs",
     "build": "tsc -p tsconfig.main.json && vite build",
-    "start": "electron dist/main.js"
+    "start": "electron dist/main/index.js"
   },
   "dependencies": {
+    "@grasp/ai": "workspace:*",
+    "@grasp/api-client": "workspace:*",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
   },

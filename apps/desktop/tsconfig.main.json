@@ -3,6 +3,11 @@
     "target": "ES2022",
     "module": "CommonJS",
     "moduleResolution": "node",
+    "baseUrl": ".",
+    "paths": {
+      "@grasp/ai": ["../../packages/ai/src/index.ts"],
+      "@grasp/api-client": ["../../packages/api-client/src/index.ts"]
+    },
     "lib": ["ES2022"],
     "strict": true,
     "noUncheckedIndexedAccess": true,
@@ -11,5 +16,5 @@
     "skipLibCheck": true,
     "outDir": "dist"
   },
-  "include": ["src/main.ts", "src/preload.ts"]
+  "include": ["src/main/**/*.ts", "src/shared/**/*.ts"]
 }

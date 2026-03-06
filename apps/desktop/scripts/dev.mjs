@@ -20,7 +20,7 @@ try {
   process.exit(1)
 }
 
-const electron = spawn(String(electronPath), ['dist/main.js'], {
+const electron = spawn(String(electronPath), ['dist/main/index.js'], {
   stdio: 'inherit',
   env: { ...process.env, VITE_DEV_SERVER_URL: url },
 })

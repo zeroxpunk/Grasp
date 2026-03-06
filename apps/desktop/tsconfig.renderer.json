@@ -12,5 +12,9 @@
     "skipLibCheck": true,
     "noEmit": true
   },
-  "include": ["src/renderer.tsx", "src/App.tsx", "src/vite-env.d.ts", "src/env.d.ts"]
+  "include": [
+    "src/renderer/**/*.ts",
+    "src/renderer/**/*.tsx",
+    "src/shared/**/*.ts"
+  ]
 }
