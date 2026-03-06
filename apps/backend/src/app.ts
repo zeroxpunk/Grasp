@@ -4,6 +4,7 @@ import type { AppEnv } from './types.js'
 import { createAuthProvider } from './auth/index.js'
 import { authMiddleware } from './middleware/auth.js'
 import { errorHandler } from './middleware/error.js'
+import authRoute from './routes/auth.js'
 import coursesRoute from './routes/courses.js'
 import lessonsRoute from './routes/lessons.js'
 import exercisesRoute from './routes/exercises.js'
@@ -14,11 +15,13 @@ import imagesRoute, { imageGenerateRoute } from './routes/images.js'
 import insightsRoute from './routes/insights.js'
 import jobsRoute from './routes/jobs.js'
 import userRoute from './routes/user.js'
+import dataImportRoute from './routes/data-import.js'
 
 const app = new Hono<AppEnv>()
 
 app.use('*', cors())
 app.onError(errorHandler)
+app.route('/api/auth', authRoute)
 
 const authProvider = createAuthProvider()
 app.use('/api/*', authMiddleware(authProvider))
@@ -38,6 +41,7 @@ v1.route('/sessions', sessionsRoute)
 v1.route('/images/generate', imageGenerateRoute)
 v1.route('/jobs', jobsRoute)
 v1.route('/me', userRoute)
+v1.route('/import', dataImportRoute)
 
 app.route('/api/v1', v1)
 

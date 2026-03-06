@@ -6,7 +6,7 @@ const PUBLIC_PATHS = new Set(['/', '/health'])
 
 export function authMiddleware(provider: AuthProvider): MiddlewareHandler<AppEnv> {
   return async (c, next) => {
-    if (PUBLIC_PATHS.has(c.req.path)) {
+    if (PUBLIC_PATHS.has(c.req.path) || c.req.path === '/api/auth' || c.req.path.startsWith('/api/auth/')) {
       return next()
     }
 

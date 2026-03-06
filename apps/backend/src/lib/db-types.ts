@@ -1,6 +1,7 @@
 import type { InferSelectModel } from 'drizzle-orm'
-import { courses, jobs, lessons, mastery, users } from '@grasp/db'
+import { authSessions, courses, jobs, lessons, mastery, users } from '@grasp/db'
 
+export type AuthSessionRow = InferSelectModel<typeof authSessions>
 export type CourseRow = InferSelectModel<typeof courses>
 export type JobRow = InferSelectModel<typeof jobs>
 export type LessonRow = InferSelectModel<typeof lessons>
