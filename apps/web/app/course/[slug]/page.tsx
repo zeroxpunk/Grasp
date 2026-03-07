@@ -42,9 +42,9 @@ export default async function CourseOverviewPage({ params }: Props) {
   );
 
   return (
-    <div className="mx-auto max-w-7xl px-6 mt-10 pb-16 space-y-16">
+    <div className="mx-auto max-w-7xl px-4 sm:px-6 mt-8 sm:mt-10 pb-16 space-y-10 sm:space-y-16">
       <section>
-        <h1 className="text-3xl font-semibold tracking-tight text-zinc-100">
+        <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight text-zinc-100">
           {manifest.title}
         </h1>
         <p className="mt-2 text-zinc-500">{manifest.description}</p>
@@ -64,7 +64,7 @@ export default async function CourseOverviewPage({ params }: Props) {
           <p className="text-sm text-zinc-500 mb-3">Continue with</p>
           <Link
             href={`/course/${slug}/${nextLesson.number}`}
-            className="inline-block border border-zinc-700 px-6 py-3 text-lg font-medium text-zinc-100 hover:text-white hover:border-zinc-500 transition-colors"
+            className="inline-block border border-zinc-700 px-6 py-3 text-base sm:text-lg font-medium text-zinc-100 hover:text-white hover:border-zinc-500 transition-colors"
           >
             {nextLesson.title}
           </Link>

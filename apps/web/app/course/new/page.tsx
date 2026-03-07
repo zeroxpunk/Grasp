@@ -150,7 +150,7 @@ export default function NewCoursePage() {
   };
 
   return (
-    <div className="mx-auto max-w-7xl px-6 mt-14 pb-16">
+    <div className="mx-auto max-w-7xl px-4 sm:px-6 mt-8 sm:mt-14 pb-16">
       <div className="max-w-2xl mx-auto">
         {step === "idle" || step === "error" ? (
           <>

@@ -346,10 +346,10 @@ export function LessonView({
 
   if (chatOpen) {
     return (
-      <div className="fixed inset-x-0 bottom-0 top-14 z-30 flex">
+      <div className="fixed inset-x-0 bottom-0 top-14 z-30 flex flex-col md:flex-row">
         <LessonProgressBar progress={totalProgress} />
-        <div ref={scrollRef} className="flex-1 min-w-0 overflow-y-auto">
-          <div className="max-w-3xl mx-auto px-6 py-8 pb-24 xl:max-w-none xl:grid xl:grid-cols-[10rem_minmax(0,48rem)] xl:justify-center xl:gap-8">
+        <div ref={scrollRef} className={`flex-1 min-w-0 overflow-y-auto ${chatCollapsed ? "" : "max-md:hidden"}`}>
+          <div className="max-w-3xl mx-auto px-4 sm:px-6 py-8 pb-24 xl:max-w-none xl:grid xl:grid-cols-[10rem_minmax(0,48rem)] xl:justify-center xl:gap-8">
             <aside className="hidden xl:block">
               <div className="sticky top-8">
                 {lessonContent && (
@@ -407,7 +407,7 @@ export function LessonView({
 
         {chatCollapsed ? (
           <div
-            className="w-11 shrink-0 border-l border-zinc-800 flex flex-col items-center pt-3 gap-2 bg-[var(--surface)]"
+            className="w-11 shrink-0 border-l border-zinc-800 flex flex-col items-center pt-3 gap-2 bg-[var(--surface)] max-md:w-full max-md:h-11 max-md:flex-row max-md:justify-center max-md:border-l-0 max-md:border-t max-md:pt-0 max-md:px-4"
             style={{ animation: "panel-in 200ms ease-out" }}
           >
             <button
@@ -419,19 +419,19 @@ export function LessonView({
                 <polyline points="15 18 9 12 15 6" />
               </svg>
             </button>
-            <span className="text-[11px] text-zinc-600 select-none [writing-mode:vertical-lr]">
+            <span className="text-[11px] text-zinc-600 select-none [writing-mode:vertical-lr] max-md:[writing-mode:horizontal-tb]">
               Chat
             </span>
           </div>
         ) : null}
 
         <div
-          className={`shrink-0 border-l border-zinc-800 relative ${chatCollapsed ? "hidden" : ""}`}
+          className={`shrink-0 border-l border-zinc-800 relative max-md:!w-full max-md:border-l-0 max-md:flex-1 ${chatCollapsed ? "hidden" : ""}`}
           style={{ width: chatWidth, animation: "panel-in 200ms ease-out" }}
         >
           {/* Drag handle */}
           <div
-            className="absolute inset-y-0 left-0 w-1 cursor-col-resize z-10 hover:bg-zinc-700/40 active:bg-zinc-700/60 transition-colors"
+            className="absolute inset-y-0 left-0 w-1 cursor-col-resize z-10 hover:bg-zinc-700/40 active:bg-zinc-700/60 transition-colors max-md:hidden"
             onMouseDown={(e) => {
               e.preventDefault();
               isDragging.current = true;
@@ -477,7 +477,7 @@ export function LessonView({
   }
 
   return (
-    <div className="mx-auto max-w-7xl px-6 mt-14 pb-16">
+    <div className="mx-auto max-w-7xl px-4 sm:px-6 mt-8 sm:mt-14 pb-16">
       <LessonProgressBar progress={totalProgress} />
       <div className="max-w-3xl mx-auto xl:max-w-none xl:grid xl:grid-cols-[11rem_minmax(0,48rem)] xl:justify-center xl:gap-10">
         <aside className="hidden xl:block">
@@ -506,7 +506,7 @@ export function LessonView({
           )}
 
           {!completed && !evaluating && !preparingNext && (
-            <div className="flex items-center gap-3 mb-12">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 mb-12">
               {allExercisesDone && (
                 <button
                   onClick={handleDirectComplete}
@@ -624,7 +624,7 @@ function LessonHeader({
         </div>
       </div>
       <div className="flex items-center gap-3">
-        <h1 className="text-3xl font-semibold tracking-tight text-zinc-100">
+        <h1 className="text-xl sm:text-3xl font-semibold tracking-tight text-zinc-100">
           {lessonTitle}
         </h1>
         {completed && (

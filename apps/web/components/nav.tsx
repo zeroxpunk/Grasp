@@ -15,7 +15,7 @@ export function Nav() {
   const { data: session } = useSession();
 
   return (
-    <nav className="flex items-center gap-8 w-full">
+    <nav className="flex items-center gap-4 sm:gap-8 w-full">
       <Link href="/" className="text-sm font-medium text-zinc-100 tracking-tight">
         Learning
       </Link>
@@ -49,7 +49,7 @@ export function Nav() {
                   className="w-6 h-6 rounded-full"
                 />
               )}
-              <span className="text-sm text-zinc-400">
+              <span className="text-sm text-zinc-400 hidden sm:inline">
                 {session.user.name || session.user.email}
               </span>
             </div>

@@ -19,7 +19,7 @@ export default async function LessonPage({ params }: Props) {
 
   if (!lessonEntry) {
     return (
-      <div className="mx-auto max-w-7xl px-6 mt-14 pb-16">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 mt-8 sm:mt-14 pb-16">
         <p className="text-zinc-500">Lesson not found.</p>
       </div>
     );
@@ -27,7 +27,7 @@ export default async function LessonPage({ params }: Props) {
 
   if (lessonEntry.status === "not_created") {
     return (
-      <div className="mx-auto max-w-7xl px-6 mt-14 pb-16">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 mt-8 sm:mt-14 pb-16">
         <div className="max-w-3xl mx-auto py-16">
           <p className="text-zinc-500">
             This lesson will be unlocked when you complete the previous one.

@@ -25,8 +25,8 @@ export default function CourseLayout({
 
   return (
     <div>
-      <div className="mx-auto max-w-7xl px-6 mt-8">
-        <div className="flex gap-6 border-b border-zinc-800/50 pb-3">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 mt-6 sm:mt-8">
+        <div className="flex gap-4 sm:gap-6 border-b border-zinc-800/50 pb-3">
           {courseLinks.map(({ suffix, label }) => {
             const href = base + suffix;
             const active = suffix === ""

@@ -29,7 +29,7 @@ export default async function CourseProgressPage({ params }: Props) {
   const masteryEntries = Object.entries(manifest.mastery);
 
   return (
-    <div className="mx-auto max-w-7xl px-6 mt-10 pb-16 space-y-16">
+    <div className="mx-auto max-w-7xl px-4 sm:px-6 mt-8 sm:mt-10 pb-16 space-y-10 sm:space-y-16">
       <section>
         <h1 className="text-3xl font-semibold tracking-tight text-zinc-100">
           Progress
@@ -46,7 +46,7 @@ export default async function CourseProgressPage({ params }: Props) {
 
       <section>
         <h2 className="text-sm text-zinc-500 mb-6">Time</h2>
-        <div className="grid grid-cols-4 gap-px bg-zinc-800 border border-zinc-800">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-px bg-zinc-800 border border-zinc-800">
           <div className="bg-black p-4">
             <p className="text-lg font-light text-zinc-100">{sessionStats.totalHours}h</p>
             <p className="text-[10px] text-zinc-600 mt-0.5">Total</p>
@@ -69,7 +69,7 @@ export default async function CourseProgressPage({ params }: Props) {
       {masteryEntries.length > 0 && (
         <section>
           <h2 className="text-sm text-zinc-500 mb-6">Mastery</h2>
-          <div className="grid grid-cols-4 gap-px bg-zinc-800 border border-zinc-800">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-px bg-zinc-800 border border-zinc-800">
             {masteryEntries.map(([key, level]) => (
               <div key={key} className="bg-black p-4">
                 <div className="flex items-center gap-2 mb-2">

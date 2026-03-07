@@ -31,7 +31,7 @@ export default function RootLayout({
       >
         <Providers>
           <header className="sticky top-0 z-40 backdrop-blur-md border-b border-zinc-800/50" style={{ backgroundColor: "rgba(12, 13, 18, 0.92)" }}>
-            <div className="mx-auto max-w-7xl px-6 h-14 flex items-center">
+            <div className="mx-auto max-w-7xl px-4 sm:px-6 h-14 flex items-center">
               <Nav />
             </div>
           </header>

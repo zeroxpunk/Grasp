@@ -22,7 +22,7 @@ export default async function CourseInsightsPage({ params }: Props) {
   ]);
 
   return (
-    <div className="mx-auto max-w-7xl px-6 mt-10 pb-16 space-y-16">
+    <div className="mx-auto max-w-7xl px-4 sm:px-6 mt-8 sm:mt-10 pb-16 space-y-10 sm:space-y-16">
       <section>
         <h1 className="text-3xl font-semibold tracking-tight text-zinc-100">
           Insights
@@ -47,11 +47,11 @@ export default async function CourseInsightsPage({ params }: Props) {
                 key={ins.id}
                 className="flex items-baseline gap-3 py-3 border-b border-zinc-800/50"
               >
-                <span className={`text-[11px] font-medium uppercase tracking-wide shrink-0 w-20 ${meta.color}`}>
+                <span className={`text-[11px] font-medium uppercase tracking-wide shrink-0 w-16 sm:w-20 ${meta.color}`}>
                   {meta.label}
                 </span>
-                <p className="text-sm text-zinc-400 flex-1">{ins.observation}</p>
-                <span className="text-[11px] text-zinc-700 shrink-0">
+                <p className="text-sm text-zinc-400 flex-1 min-w-0">{ins.observation}</p>
+                <span className="text-[11px] text-zinc-700 shrink-0 hidden sm:inline">
                   {new Date(ins.createdAt).toLocaleDateString()}
                 </span>
               </div>

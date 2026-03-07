@@ -14,13 +14,13 @@ export default async function Home() {
   const totalLessons = courses.reduce((sum, c) => sum + c.totalLessons, 0);
 
   return (
-    <div className="mx-auto max-w-7xl px-6 mt-14 pb-16 space-y-20">
-      <section className="flex items-baseline justify-between">
+    <div className="mx-auto max-w-7xl px-4 sm:px-6 mt-8 sm:mt-14 pb-16 space-y-14 sm:space-y-20">
+      <section className="flex flex-col gap-3 sm:flex-row sm:items-baseline sm:justify-between">
         <div>
-          <h1 className="text-4xl font-semibold tracking-tight text-zinc-100">
+          <h1 className="text-2xl sm:text-4xl font-semibold tracking-tight text-zinc-100">
             Courses
           </h1>
-          <p className="mt-3 text-lg text-zinc-500">
+          <p className="mt-3 text-base sm:text-lg text-zinc-500">
             {courses.length === 0
               ? "Create your first course to get started."
               : `${courses.length} course${courses.length !== 1 ? "s" : ""} \u00b7 ${totalCompleted}/${totalLessons} lessons complete`}
@@ -35,7 +35,7 @@ export default async function Home() {
       </section>
 
       {courses.length > 0 && (
-        <section className="grid grid-cols-3 gap-px bg-zinc-800 border border-zinc-800">
+        <section className="grid grid-cols-3 gap-px bg-zinc-800 border border-zinc-800 max-sm:grid-cols-1">
           <Stat label="Courses" value={String(courses.length)} />
           <Stat label="Streak" value={`${sessionStats.currentStreakDays}d`} />
           <Stat label="Hours" value={`${sessionStats.totalHours}`} />
@@ -51,7 +51,7 @@ export default async function Home() {
               className="flex items-center justify-between py-5 border-b border-zinc-800/50 hover:bg-zinc-900/30 transition-colors -mx-3 px-3"
             >
               <div className="min-w-0">
-                <p className="text-lg font-medium text-zinc-100 truncate">
+                <p className="text-base sm:text-lg font-medium text-zinc-100 truncate">
                   {course.title}
                 </p>
                 <p className="text-sm text-zinc-600 mt-1 truncate">

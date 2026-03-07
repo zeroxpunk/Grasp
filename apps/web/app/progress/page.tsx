@@ -14,7 +14,7 @@ export default async function GlobalProgressPage() {
   const totalLessons = courses.reduce((sum, c) => sum + c.totalLessons, 0);
 
   return (
-    <div className="mx-auto max-w-7xl px-6 mt-14 pb-16 space-y-20">
+    <div className="mx-auto max-w-7xl px-4 sm:px-6 mt-8 sm:mt-14 pb-16 space-y-14 sm:space-y-20">
       <section>
         <h1 className="text-3xl font-semibold tracking-tight text-zinc-100">
           Progress
@@ -26,7 +26,7 @@ export default async function GlobalProgressPage() {
 
       <section>
         <h2 className="text-sm text-zinc-500 mb-6">Time</h2>
-        <div className="grid grid-cols-4 gap-px bg-zinc-800 border border-zinc-800">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-px bg-zinc-800 border border-zinc-800">
           <div className="bg-black p-4">
             <p className="text-lg font-light text-zinc-100">{sessionStats.totalHours}h</p>
             <p className="text-[10px] text-zinc-600 mt-0.5">Total</p>
