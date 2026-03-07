@@ -13,6 +13,7 @@
     "@grasp/db": "workspace:*",
     "@hono/node-server": "^1.19.9",
     "drizzle-orm": "^0.44.0",
+    "google-auth-library": "^9.15.1",
     "hono": "^4.12.3",
     "postgres": "^3.4.7"
   },

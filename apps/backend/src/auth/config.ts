@@ -26,4 +26,9 @@ export const authConfig = {
     DEFAULT_REFRESH_TOKEN_TTL_DAYS,
   ),
   devDesktopAuthCode: requireNonEmptyString(process.env.DESKTOP_AUTH_DEV_CODE) || DEFAULT_DESKTOP_AUTH_DEV_CODE,
+  google: {
+    clientId: process.env.GOOGLE_OAUTH_CLIENT_ID || '',
+    clientSecret: process.env.GOOGLE_OAUTH_CLIENT_SECRET || '',
+    desktopRedirectUri: process.env.GOOGLE_OAUTH_DESKTOP_REDIRECT_URI || 'grasp://auth/callback',
+  },
 }

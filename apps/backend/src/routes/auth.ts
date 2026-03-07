@@ -2,6 +2,8 @@ import { Hono } from 'hono'
 import type { Context } from 'hono'
 import type { AppEnv } from '../types'
 import { createDesktopAuthCodeResolver } from '../auth/desktop-code-resolver'
+import { authConfig } from '../auth/config'
+import { verifyGoogleIdToken, exchangeGoogleAuthCode } from '../auth/google-verifier'
 import * as sessionService from '../auth/session-service'
 import { requireNonEmptyString } from '../utils/validation'
 
@@ -14,6 +16,55 @@ async function readBody<T>(c: Context<AppEnv>): Promise<T | null> {
     return null
   }
 }
+
+app.post('/google/verify', async (c) => {
+  const { clientId } = authConfig.google
+  if (!clientId) {
+    return c.json({ error: 'Google OAuth is not configured' }, 501)
+  }
+
+  const body = await readBody<{ idToken?: string; deviceInfo?: string }>(c)
+  const idToken = requireNonEmptyString(body?.idToken)
+  if (!idToken) {
+    return c.json({ error: 'idToken is required' }, 400)
+  }
+
+  const identity = await verifyGoogleIdToken(idToken, clientId)
+  if (!identity) {
+    return c.json({ error: 'Invalid Google ID token' }, 401)
+  }
+
+  const session = await sessionService.createSession(identity, {
+    deviceInfo: requireNonEmptyString(body?.deviceInfo),
+  })
+
+  return c.json(session)
+})
+
+app.post('/google/exchange', async (c) => {
+  const { clientId, clientSecret, desktopRedirectUri } = authConfig.google
+  if (!clientId || !clientSecret) {
+    return c.json({ error: 'Google OAuth is not configured' }, 501)
+  }
+
+  const body = await readBody<{ code?: string; redirectUri?: string; deviceInfo?: string }>(c)
+  const code = requireNonEmptyString(body?.code)
+  if (!code) {
+    return c.json({ error: 'code is required' }, 400)
+  }
+
+  const redirectUri = requireNonEmptyString(body?.redirectUri) || desktopRedirectUri
+  const identity = await exchangeGoogleAuthCode(code, clientId, clientSecret, redirectUri)
+  if (!identity) {
+    return c.json({ error: 'Invalid or expired auth code' }, 401)
+  }
+
+  const session = await sessionService.createSession(identity, {
+    deviceInfo: requireNonEmptyString(body?.deviceInfo),
+  })
+
+  return c.json(session)
+})
 
 app.post('/desktop/session/exchange', async (c) => {
   const body = await readBody<{ code?: string; deviceInfo?: string }>(c)
