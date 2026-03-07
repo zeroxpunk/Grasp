@@ -41,8 +41,12 @@ function resolveProviderConfig(
 ): TextProviderConfig | null {
   switch (provider) {
     case 'anthropic': {
-      const apiKey = readEnvValue(env, 'ANTHROPIC_API_KEY')
-      return apiKey ? { kind: 'anthropic', apiKey } : null
+      const key = readEnvValue(env, 'ANTHROPIC_API_KEY')
+      if (!key) return null
+      const isOAuthToken = key.startsWith('sk-ant-oat')
+      return isOAuthToken
+        ? { kind: 'anthropic', authToken: key }
+        : { kind: 'anthropic', apiKey: key }
     }
     case 'openai': {
       const apiKey = readEnvValue(env, 'OPENAI_API_KEY')
