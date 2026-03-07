@@ -36,6 +36,26 @@ const aiAuth: AiAuthBridge = {
   },
 }
 
+const auth = {
+  startLogin: () => ipcRenderer.invoke('auth:start-login') as Promise<void>,
+  loginDev: () => ipcRenderer.invoke('auth:login-dev') as Promise<boolean>,
+  logout: () => ipcRenderer.invoke('auth:logout') as Promise<void>,
+  getUser: () =>
+    ipcRenderer.invoke('auth:get-user') as Promise<{
+      id: string
+      email: string
+      displayName: string | null
+      avatarUrl: string | null
+    } | null>,
+  isAuthenticated: () => ipcRenderer.invoke('auth:is-authenticated') as Promise<boolean>,
+  getToken: () => ipcRenderer.invoke('auth:get-token') as Promise<string>,
+  onLoginComplete: (callback: () => void) => {
+    const handler = () => callback()
+    ipcRenderer.on('auth:login-complete', handler)
+    return () => { ipcRenderer.removeListener('auth:login-complete', handler) }
+  },
+}
+
 const ai = {
   createCourse: (params: { description: string; context?: string }) =>
     ipcRenderer.invoke('ai:create-course', params) as Promise<{ slug: string }>,
@@ -52,5 +72,6 @@ const ai = {
 
 contextBridge.exposeInMainWorld('electronAPI', {
   aiAuth,
+  auth,
   ai,
 })
