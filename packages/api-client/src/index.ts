@@ -1,4 +1,5 @@
 import { GraspHttpClient } from './client'
+import { AuthResource } from './resources/auth'
 import { CoursesResource } from './resources/courses'
 import { LessonsResource } from './resources/lessons'
 import { ExercisesResource } from './resources/exercises'
@@ -15,6 +16,7 @@ import type { ClientConfig } from './types'
 export class GraspClient {
   private http: GraspHttpClient
 
+  readonly auth: AuthResource
   readonly courses: CoursesResource
   readonly lessons: LessonsResource
   readonly exercises: ExercisesResource
@@ -29,6 +31,7 @@ export class GraspClient {
 
   constructor(config: ClientConfig) {
     this.http = new GraspHttpClient(config)
+    this.auth = new AuthResource(this.http)
     this.courses = new CoursesResource(this.http)
     this.lessons = new LessonsResource(this.http)
     this.exercises = new ExercisesResource(this.http)

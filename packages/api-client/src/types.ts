@@ -213,6 +213,14 @@ export interface ImportCourseResponse {
   courseSlug: string
 }
 
+export interface AuthSessionResponse {
+  token: string
+  refreshToken: string
+  expiresAt: string
+  refreshExpiresAt: string
+  user: AuthUser
+}
+
 export interface ClientConfig {
   baseUrl: string
   token?: string | (() => string | Promise<string>)
