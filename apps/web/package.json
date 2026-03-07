@@ -9,11 +9,8 @@
     "lint": "eslint"
   },
   "dependencies": {
-    "@ai-sdk/anthropic": "^3.0.47",
-    "@ai-sdk/google": "^3.0.31",
-    "ai": "^6.0.99",
+    "@grasp/api-client": "workspace:*",
     "clsx": "^2.1.1",
-    "gray-matter": "^4.0.3",
     "hast-util-to-string": "^3.0.1",
     "next": "16.1.6",
     "next-mdx-remote": "^6.0.0",
@@ -27,8 +24,7 @@
     "shiki": "^3.23.0",
     "tailwind-merge": "^3.5.0",
     "unified": "^11.0.5",
-    "unist-util-visit": "^5.1.0",
-    "zod": "^4.3.6"
+    "unist-util-visit": "^5.1.0"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
