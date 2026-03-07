@@ -1,10 +1,10 @@
-import { getClient } from "@/lib/api";
+import { getServerClient } from "@/lib/api";
 import Link from "next/link";
 
 export const dynamic = "force-dynamic";
 
 export default async function Home() {
-  const client = getClient();
+  const client = await getServerClient();
   const [courses, sessionStats] = await Promise.all([
     client.courses.list(),
     client.sessions.stats(),

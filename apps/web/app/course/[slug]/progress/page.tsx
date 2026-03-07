@@ -1,4 +1,4 @@
-import { getClient } from "@/lib/api";
+import { getServerClient } from "@/lib/api";
 
 export const dynamic = "force-dynamic";
 
@@ -19,7 +19,7 @@ function getMasteryLabel(level: number): string {
 
 export default async function CourseProgressPage({ params }: Props) {
   const { slug } = await params;
-  const client = getClient();
+  const client = await getServerClient();
   const [manifest, sessionStats] = await Promise.all([
     client.courses.get(slug),
     client.sessions.stats(),

@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useSession, signOut } from "next-auth/react";
 import { cn } from "@/lib/utils";
 
 const topLinks = [
@@ -11,6 +12,7 @@ const topLinks = [
 
 export function Nav() {
   const pathname = usePathname();
+  const { data: session } = useSession();
 
   return (
     <nav className="flex items-center gap-8 w-full">
@@ -33,7 +35,33 @@ export function Nav() {
           </Link>
         );
       })}
+
+      <div className="ml-auto flex items-center gap-4">
+        {session?.user && (
+          <>
+            <div className="flex items-center gap-2">
+              {session.user.image && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={session.user.image}
+                  alt=""
+                  referrerPolicy="no-referrer"
+                  className="w-6 h-6 rounded-full"
+                />
+              )}
+              <span className="text-sm text-zinc-400">
+                {session.user.name || session.user.email}
+              </span>
+            </div>
+            <button
+              onClick={() => signOut({ callbackUrl: "/login" })}
+              className="text-sm text-zinc-600 hover:text-zinc-300 transition-colors"
+            >
+              Sign out
+            </button>
+          </>
+        )}
+      </div>
     </nav>
   );
 }
-

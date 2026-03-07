@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { ChatMarkdown } from "@/components/chat-markdown";
-import { getClient } from "@/lib/api";
+import { useGraspClient } from "@/lib/grasp-client-provider";
 import type { Exercise, ExerciseProgress } from "@/lib/types";
 
 interface Message {
@@ -64,6 +64,7 @@ export function ChatPanel({
   exerciseProgress,
   onExerciseAttempted,
 }: ChatPanelProps) {
+  const client = useGraspClient();
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [isStreaming, setIsStreaming] = useState(false);
@@ -72,7 +73,6 @@ export function ChatPanel({
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
-    const client = getClient();
     async function load() {
       try {
         const saved = await client.chat.getHistory(courseSlug, lessonNumber);
@@ -128,7 +128,6 @@ export function ChatPanel({
   const canComplete = !isStreaming && !evaluating && !preparingNext && allExercisesAttempted && (exchangeCount >= 3 || totalExercises > 0);
 
   function persistChat(msgs: Message[]) {
-    const client = getClient();
     client.chat.saveHistory(courseSlug, lessonNumber, {
       messages: msgs.map((m) => ({
         role: m.role,
@@ -155,7 +154,6 @@ export function ChatPanel({
     setMessages([...updatedMessages, assistantMessage]);
 
     try {
-      const client = getClient();
       const stream = await client.chat.stream({
         courseSlug,
         lessonNumber,

@@ -1,14 +1,24 @@
 import { GraspClient } from "@grasp/api-client";
 
-const baseUrl =
-  process.env.NEXT_PUBLIC_GRASP_API_URL || "http://localhost:4000";
-const token = process.env.NEXT_PUBLIC_GRASP_API_TOKEN || undefined;
+const backendUrl =
+  process.env.GRASP_API_URL ||
+  process.env.NEXT_PUBLIC_GRASP_API_URL ||
+  "http://localhost:4000";
 
-let client: GraspClient | null = null;
+const devToken = process.env.NEXT_PUBLIC_GRASP_API_TOKEN || undefined;
 
-export function getClient(): GraspClient {
-  if (!client) {
-    client = new GraspClient({ baseUrl, token });
+export async function getServerClient(): Promise<GraspClient> {
+  if (process.env.AUTH_GOOGLE_ID) {
+    const { auth } = await import("@/lib/auth");
+    const session = await auth();
+    const token = session?.graspAccessToken;
+    return new GraspClient({ baseUrl: backendUrl, token });
   }
-  return client;
+
+  return new GraspClient({ baseUrl: backendUrl, token: devToken });
+}
+
+export function createClient(token?: string): GraspClient {
+  const baseUrl = process.env.NEXT_PUBLIC_GRASP_API_URL || "http://localhost:4000";
+  return new GraspClient({ baseUrl, token });
 }

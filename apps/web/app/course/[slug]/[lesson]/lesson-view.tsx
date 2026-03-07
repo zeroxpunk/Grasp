@@ -8,7 +8,7 @@ import { TextSelectionPopover } from "@/components/text-selection-popover";
 import { ExerciseRenderer } from "@/components/exercises/exercise-renderer";
 import { ImageLightbox } from "@/components/image-lightbox";
 import { TableOfContents } from "@/components/table-of-contents";
-import { getClient } from "@/lib/api";
+import { useGraspClient } from "@/lib/grasp-client-provider";
 import type { Exercise, ExerciseProgress } from "@/lib/types";
 
 interface LessonViewProps {
@@ -42,6 +42,7 @@ export function LessonView({
   exerciseProgress,
   hasChatHistory,
 }: LessonViewProps) {
+  const client = useGraspClient();
   const contentRef = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const [lightbox, setLightbox] = useState<{ images: { src: string; alt: string }[]; index: number } | null>(null);
@@ -194,7 +195,6 @@ export function LessonView({
   const handleSelfGrade = useCallback((exerciseId: number, completed: boolean) => {
     const status = completed ? "completed" : "attempted";
     handleExerciseAttempted(exerciseId, status);
-    const client = getClient();
     client.exercises.updateProgress(courseSlug, lessonNumber, exerciseId, { status }).catch(() => {});
   }, [courseSlug, lessonNumber, handleExerciseAttempted]);
 
@@ -219,7 +219,6 @@ export function LessonView({
   const startSession = async () => {
     setChatOpen(true);
     try {
-      const client = getClient();
       await client.sessions.start(courseSlug);
     } catch {}
   };
@@ -241,7 +240,6 @@ export function LessonView({
     const summary = chatSummary + buildExerciseSummary();
 
     try {
-      const client = getClient();
       await client.sessions.end();
 
       const result = await client.evaluate.evaluate({
@@ -279,7 +277,6 @@ export function LessonView({
     const summary = `The learner studied the lesson content and completed all exercises via the interactive UI:\n${exerciseLines.join("\n")}`;
 
     try {
-      const client = getClient();
       // End any active session (best-effort)
       await client.sessions.end().catch(() => {});
 
@@ -308,7 +305,6 @@ export function LessonView({
   };
 
   async function waitForLesson(slug: string, lesson: number) {
-    const client = getClient();
     for (let i = 0; i < 60; i++) {
       try {
         const manifest = await client.courses.get(slug);
@@ -685,6 +681,7 @@ function MissingExercises({
   lessonNumber: number;
   onGenerated: (exercises: Exercise[]) => void;
 }) {
+  const client = useGraspClient();
   const [status, setStatus] = useState<"generating" | "error" | "done">("generating");
   const [error, setError] = useState<string | null>(null);
   const attempted = useRef(false);
@@ -695,7 +692,6 @@ function MissingExercises({
 
     async function generate() {
       try {
-        const client = getClient();
         const { jobId } = await client.exercises.regenerate(courseSlug, lessonNumber);
         await client.jobs.poll(jobId);
         setStatus("done");
@@ -707,7 +703,7 @@ function MissingExercises({
     }
 
     generate();
-  }, [courseSlug, lessonNumber, onGenerated]);
+  }, [courseSlug, lessonNumber, onGenerated, client]);
 
   function handleRetry() {
     setStatus("generating");
@@ -715,7 +711,6 @@ function MissingExercises({
     attempted.current = false;
     (async () => {
       try {
-        const client = getClient();
         const { jobId } = await client.exercises.regenerate(courseSlug, lessonNumber);
         await client.jobs.poll(jobId);
         setStatus("done");

@@ -1,4 +1,4 @@
-import { getClient } from "@/lib/api";
+import { getServerClient } from "@/lib/api";
 import Link from "next/link";
 
 export const dynamic = "force-dynamic";
@@ -9,7 +9,7 @@ interface Props {
 
 export default async function CourseOverviewPage({ params }: Props) {
   const { slug } = await params;
-  const client = getClient();
+  const client = await getServerClient();
   const manifest = await client.courses.get(slug);
 
   const completed = manifest.lessons.filter((l) => l.status === "completed").length;

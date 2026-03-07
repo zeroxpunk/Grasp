@@ -1,13 +1,14 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { getClient } from "@/lib/api";
+import { useGraspClient } from "@/lib/grasp-client-provider";
 
 interface DiagramImageProps {
   description: string;
 }
 
 export function DiagramImage({ description }: DiagramImageProps) {
+  const client = useGraspClient();
   const [state, setState] = useState<"loading" | "done" | "error">("loading");
   const [dataUrl, setDataUrl] = useState<string | null>(null);
 
@@ -16,7 +17,6 @@ export function DiagramImage({ description }: DiagramImageProps) {
 
     async function generate() {
       try {
-        const client = getClient();
         const data = await client.images.generate({ description });
 
         if (!cancelled) {

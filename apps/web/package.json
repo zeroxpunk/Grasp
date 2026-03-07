@@ -9,10 +9,12 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@auth/core": "^0.34.3",
     "@grasp/api-client": "workspace:*",
     "clsx": "^2.1.1",
     "hast-util-to-string": "^3.0.1",
     "next": "16.1.6",
+    "next-auth": "5.0.0-beta.30",
     "next-mdx-remote": "^6.0.0",
     "react": "19.2.3",
     "react-dom": "19.2.3",

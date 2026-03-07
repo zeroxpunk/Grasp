@@ -1,4 +1,4 @@
-import { getClient } from "@/lib/api";
+import { getServerClient } from "@/lib/api";
 import { renderMarkdown, renderCodeBlock } from "@/lib/render-markdown";
 import { toExercise } from "@/lib/types";
 import { LessonView } from "./lesson-view";
@@ -12,7 +12,7 @@ interface Props {
 export default async function LessonPage({ params }: Props) {
   const { slug, lesson: lessonStr } = await params;
   const lessonNumber = parseInt(lessonStr, 10);
-  const client = getClient();
+  const client = await getServerClient();
 
   const manifest = await client.courses.get(slug);
   const lessonEntry = manifest.lessons.find((l) => l.number === lessonNumber);

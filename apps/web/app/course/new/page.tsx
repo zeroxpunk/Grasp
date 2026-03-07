@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { getClient } from "@/lib/api";
+import { useGraspClient } from "@/lib/grasp-client-provider";
 import type { JobStatus } from "@/lib/types";
 
 type Step = "idle" | "researching" | "generating" | "writing" | "done" | "error";
@@ -46,6 +46,7 @@ function jobStatusToStep(status: JobStatus): Step {
 }
 
 export default function NewCoursePage() {
+  const client = useGraspClient();
   const [description, setDescription] = useState("");
   const [context, setContext] = useState("");
   const [step, setStep] = useState<Step>("idle");
@@ -100,7 +101,6 @@ export default function NewCoursePage() {
     }, 1000);
 
     try {
-      const client = getClient();
       const { jobId } = await client.courses.create({
         description: description.trim(),
         context: context.trim() || undefined,

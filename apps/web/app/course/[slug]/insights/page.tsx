@@ -1,4 +1,4 @@
-import { getClient } from "@/lib/api";
+import { getServerClient } from "@/lib/api";
 
 export const dynamic = "force-dynamic";
 
@@ -15,7 +15,7 @@ const KIND_LABELS: Record<string, { label: string; color: string }> = {
 
 export default async function CourseInsightsPage({ params }: Props) {
   const { slug } = await params;
-  const client = getClient();
+  const client = await getServerClient();
   const [insights, manifest] = await Promise.all([
     client.insights.list(slug),
     client.courses.get(slug),
