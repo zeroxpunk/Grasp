@@ -1,7 +1,7 @@
 import { Hono } from 'hono'
-import type { AppEnv } from '../types.js'
-import * as courseService from '../services/course-service.js'
-import * as insightService from '../services/insight-service.js'
+import type { AppEnv } from '../types'
+import * as courseService from '../services/course-service'
+import * as insightService from '../services/insight-service'
 
 const app = new Hono<AppEnv>()
 

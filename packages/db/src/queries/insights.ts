@@ -1,6 +1,6 @@
 import { eq, desc } from 'drizzle-orm'
-import { insights } from '../schema/insights.js'
-import { getDb } from '../client.js'
+import { insights } from '../schema/insights'
+import { getDb } from '../client'
 
 export function listByCourse(courseId: string) {
   return getDb()

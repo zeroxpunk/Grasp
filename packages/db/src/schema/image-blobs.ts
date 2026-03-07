@@ -1,5 +1,5 @@
 import { pgTable, text, timestamp, unique, customType, uuid } from 'drizzle-orm/pg-core'
-import { courses } from './courses.js'
+import { courses } from './courses'
 
 const bytea = customType<{ data: Buffer }>({
   dataType() {

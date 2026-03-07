@@ -1,7 +1,7 @@
 import crypto from 'node:crypto'
 import { DEFAULT_DIAGRAM_IMAGE_MEDIA_TYPE } from '@grasp/ai'
 import { imageBlobQueries } from '@grasp/db'
-import { getAI } from './ai-service.js'
+import { getAI } from './ai-service'
 
 const VISUAL_REGEX = /\[DIAGRAM:\s*(.+?)\]/g
 const FAILED_VISUAL_REGEX = /\*\[Visual:\s*(.+?)\]\*/g

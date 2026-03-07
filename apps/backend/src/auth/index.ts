@@ -1,9 +1,9 @@
-import type { AuthProvider } from './types.js'
-import { authConfig } from './config.js'
-import { DevAuthProvider } from './dev-provider.js'
-import { SessionAuthProvider } from './session-provider.js'
+import type { AuthProvider } from './types'
+import { authConfig } from './config'
+import { DevAuthProvider } from './dev-provider'
+import { SessionAuthProvider } from './session-provider'
 
-export type { AuthUser, AuthProvider } from './types.js'
+export type { AuthUser, AuthProvider } from './types'
 
 export function createAuthProvider(): AuthProvider {
   if (authConfig.providerMode === 'dev') {

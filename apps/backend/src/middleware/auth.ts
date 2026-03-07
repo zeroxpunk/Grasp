@@ -1,6 +1,6 @@
 import type { MiddlewareHandler } from 'hono'
-import type { AuthProvider } from '../auth/types.js'
-import type { AppEnv } from '../types.js'
+import type { AuthProvider } from '../auth/types'
+import type { AppEnv } from '../types'
 
 const PUBLIC_PATHS = new Set(['/', '/health'])
 

@@ -1,16 +1,16 @@
-import { GraspHttpClient } from './client.js'
-import { CoursesResource } from './resources/courses.js'
-import { LessonsResource } from './resources/lessons.js'
-import { ExercisesResource } from './resources/exercises.js'
-import { ChatResource } from './resources/chat.js'
-import { EvaluateResource } from './resources/evaluate.js'
-import { SessionsResource } from './resources/sessions.js'
-import { ImagesResource } from './resources/images.js'
-import { InsightsResource } from './resources/insights.js'
-import { JobsResource } from './resources/jobs.js'
-import { UserResource } from './resources/user.js'
-import { ImportResource } from './resources/import.js'
-import type { ClientConfig } from './types.js'
+import { GraspHttpClient } from './client'
+import { CoursesResource } from './resources/courses'
+import { LessonsResource } from './resources/lessons'
+import { ExercisesResource } from './resources/exercises'
+import { ChatResource } from './resources/chat'
+import { EvaluateResource } from './resources/evaluate'
+import { SessionsResource } from './resources/sessions'
+import { ImagesResource } from './resources/images'
+import { InsightsResource } from './resources/insights'
+import { JobsResource } from './resources/jobs'
+import { UserResource } from './resources/user'
+import { ImportResource } from './resources/import'
+import type { ClientConfig } from './types'
 
 export class GraspClient {
   private http: GraspHttpClient
@@ -43,5 +43,5 @@ export class GraspClient {
   }
 }
 
-export { ApiError } from './client.js'
-export type * from './types.js'
+export { ApiError } from './client'
+export type * from './types'

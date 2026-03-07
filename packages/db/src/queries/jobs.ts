@@ -1,6 +1,6 @@
 import { eq, desc } from 'drizzle-orm'
-import { jobs } from '../schema/jobs.js'
-import { getDb } from '../client.js'
+import { jobs } from '../schema/jobs'
+import { getDb } from '../client'
 
 export function findById(id: string) {
   return getDb().select().from(jobs).where(eq(jobs.id, id)).limit(1).then(r => r[0] ?? null)

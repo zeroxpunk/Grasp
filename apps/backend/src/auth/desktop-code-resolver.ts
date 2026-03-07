@@ -1,5 +1,5 @@
-import { authConfig } from './config.js'
-import type { AuthIdentity, DesktopAuthCodeResolver } from './types.js'
+import { authConfig } from './config'
+import type { AuthIdentity, DesktopAuthCodeResolver } from './types'
 
 const DEV_AUTH_IDENTITY: AuthIdentity = {
   provider: 'dev',

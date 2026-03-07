@@ -1,9 +1,9 @@
 import { Hono } from 'hono'
 import type { Context } from 'hono'
-import type { AppEnv } from '../types.js'
-import { createDesktopAuthCodeResolver } from '../auth/desktop-code-resolver.js'
-import * as sessionService from '../auth/session-service.js'
-import { requireNonEmptyString } from '../utils/validation.js'
+import type { AppEnv } from '../types'
+import { createDesktopAuthCodeResolver } from '../auth/desktop-code-resolver'
+import * as sessionService from '../auth/session-service'
+import { requireNonEmptyString } from '../utils/validation'
 
 const app = new Hono<AppEnv>()
 

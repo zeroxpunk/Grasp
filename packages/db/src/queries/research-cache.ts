@@ -1,6 +1,6 @@
 import { eq } from 'drizzle-orm'
-import { researchCache } from '../schema/research-cache.js'
-import { getDb } from '../client.js'
+import { researchCache } from '../schema/research-cache'
+import { getDb } from '../client'
 
 const CACHE_TTL_MS = 60 * 60 * 1000
 

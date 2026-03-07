@@ -1,18 +1,18 @@
 import { Hono } from 'hono'
 import { userQueries } from '@grasp/db'
-import type { AppEnv } from '../types.js'
-import { getAI } from '../services/ai-service.js'
-import * as courseService from '../services/course-service.js'
-import * as evaluationService from '../services/evaluation-service.js'
-import * as exerciseService from '../services/exercise-service.js'
-import * as jobService from '../services/job-service.js'
-import { queueJob } from '../services/job-runner.js'
-import * as learningService from '../services/learning-service.js'
-import * as lessonService from '../services/lesson-service.js'
+import type { AppEnv } from '../types'
+import { getAI } from '../services/ai-service'
+import * as courseService from '../services/course-service'
+import * as evaluationService from '../services/evaluation-service'
+import * as exerciseService from '../services/exercise-service'
+import * as jobService from '../services/job-service'
+import { queueJob } from '../services/job-runner'
+import * as learningService from '../services/learning-service'
+import * as lessonService from '../services/lesson-service'
 import {
   isPositiveInteger,
   requireNonEmptyString,
-} from '../utils/validation.js'
+} from '../utils/validation'
 
 const app = new Hono<AppEnv>()
 

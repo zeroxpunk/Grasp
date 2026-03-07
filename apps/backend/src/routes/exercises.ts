@@ -1,11 +1,11 @@
 import { Hono } from 'hono'
-import type { AppEnv } from '../types.js'
-import * as courseService from '../services/course-service.js'
-import * as lessonService from '../services/lesson-service.js'
-import * as exerciseService from '../services/exercise-service.js'
-import * as jobService from '../services/job-service.js'
-import { queueJob } from '../services/job-runner.js'
-import { parsePositiveInteger } from '../utils/validation.js'
+import type { AppEnv } from '../types'
+import * as courseService from '../services/course-service'
+import * as lessonService from '../services/lesson-service'
+import * as exerciseService from '../services/exercise-service'
+import * as jobService from '../services/job-service'
+import { queueJob } from '../services/job-runner'
+import { parsePositiveInteger } from '../utils/validation'
 
 const app = new Hono<AppEnv>()
 

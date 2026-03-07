@@ -1,8 +1,8 @@
 import { authSessionQueries, userQueries } from '@grasp/db'
-import { authConfig } from './config.js'
-import type { AuthIdentity, AuthUser } from './types.js'
-import { toAuthUser } from './user-mapper.js'
-import { createToken, hashToken } from '../utils/tokens.js'
+import { authConfig } from './config'
+import type { AuthIdentity, AuthUser } from './types'
+import { toAuthUser } from './user-mapper'
+import { createToken, hashToken } from '../utils/tokens'
 
 type AuthSessionResponse = {
   token: string

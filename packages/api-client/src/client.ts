@@ -1,4 +1,4 @@
-import type { ClientConfig } from './types.js'
+import type { ClientConfig } from './types'
 
 export class ApiError extends Error {
   constructor(

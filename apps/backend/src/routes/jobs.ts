@@ -1,7 +1,7 @@
 import { Hono } from 'hono'
-import type { AppEnv } from '../types.js'
-import type { JobRow } from '../lib/db-types.js'
-import * as jobService from '../services/job-service.js'
+import type { AppEnv } from '../types'
+import type { JobRow } from '../lib/db-types'
+import * as jobService from '../services/job-service'
 
 function serializeJob(job: JobRow) {
   return {

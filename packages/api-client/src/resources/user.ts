@@ -1,5 +1,5 @@
-import type { GraspHttpClient } from '../client.js'
-import type { UserProfile, UpdateUserRequest, OkResponse } from '../types.js'
+import type { GraspHttpClient } from '../client'
+import type { UserProfile, UpdateUserRequest, OkResponse } from '../types'
 
 export class UserResource {
   constructor(private http: GraspHttpClient) {}

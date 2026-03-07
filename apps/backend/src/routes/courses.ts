@@ -1,9 +1,9 @@
 import { Hono } from 'hono'
-import type { AppEnv } from '../types.js'
-import * as courseService from '../services/course-service.js'
-import * as jobService from '../services/job-service.js'
-import { queueJob } from '../services/job-runner.js'
-import { requireNonEmptyString } from '../utils/validation.js'
+import type { AppEnv } from '../types'
+import * as courseService from '../services/course-service'
+import * as jobService from '../services/job-service'
+import { queueJob } from '../services/job-runner'
+import { requireNonEmptyString } from '../utils/validation'
 
 const app = new Hono<AppEnv>()
 

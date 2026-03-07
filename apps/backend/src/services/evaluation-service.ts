@@ -1,5 +1,5 @@
 import { insightQueries, lessonQueries, masteryQueries } from '@grasp/db'
-import type { LessonRow } from '../lib/db-types.js'
+import type { LessonRow } from '../lib/db-types'
 
 export interface PlanChange {
   action: 'add' | 'remove' | 'skip'

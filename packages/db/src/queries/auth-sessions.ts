@@ -1,6 +1,6 @@
 import { and, desc, eq, gt, isNull } from 'drizzle-orm'
-import { getDb } from '../client.js'
-import { authSessions } from '../schema/auth-sessions.js'
+import { getDb } from '../client'
+import { authSessions } from '../schema/auth-sessions'
 
 export function findActiveByAccessTokenHash(accessTokenHash: string) {
   return getDb()

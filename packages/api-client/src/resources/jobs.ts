@@ -1,5 +1,5 @@
-import type { GraspHttpClient } from '../client.js'
-import type { Job, PollOptions } from '../types.js'
+import type { GraspHttpClient } from '../client'
+import type { Job, PollOptions } from '../types'
 
 export class JobsResource {
   constructor(private http: GraspHttpClient) {}

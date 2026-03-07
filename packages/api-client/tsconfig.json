@@ -1,10 +1,10 @@
 {
   "compilerOptions": {
     "target": "ESNext",
-    "module": "NodeNext",
-    "moduleResolution": "NodeNext",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
     "strict": true,
-    "verbatimModuleSyntax": true,
+    "isolatedModules": true,
     "skipLibCheck": true,
     "outDir": "./dist",
     "rootDir": "./src",

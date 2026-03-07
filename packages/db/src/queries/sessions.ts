@@ -1,6 +1,6 @@
 import { eq, and, isNull, desc, sql } from 'drizzle-orm'
-import { sessions } from '../schema/sessions.js'
-import { getDb } from '../client.js'
+import { sessions } from '../schema/sessions'
+import { getDb } from '../client'
 
 export function listByUser(userId: string) {
   return getDb()

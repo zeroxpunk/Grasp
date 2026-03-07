@@ -1,7 +1,7 @@
 import { authSessionQueries, userQueries } from '@grasp/db'
-import { hashToken } from '../utils/tokens.js'
-import { toAuthUser } from './user-mapper.js'
-import type { AuthProvider, AuthUser } from './types.js'
+import { hashToken } from '../utils/tokens'
+import { toAuthUser } from './user-mapper'
+import type { AuthProvider, AuthUser } from './types'
 
 export class SessionAuthProvider implements AuthProvider {
   name = 'session'

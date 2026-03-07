@@ -1,3 +1,3 @@
-export * from './schema/index.js'
-export * from './queries/index.js'
-export { getDb, closeDb, type Database } from './client.js'
+export * from './schema/index'
+export * from './queries/index'
+export { getDb, closeDb, type Database } from './client'

@@ -1,4 +1,4 @@
-import type { AuthUser } from './auth/types.js'
+import type { AuthUser } from './auth/types'
 
 export type AppEnv = {
   Variables: {

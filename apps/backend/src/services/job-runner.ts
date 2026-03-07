@@ -1,6 +1,6 @@
-import * as jobService from './job-service.js'
-import * as learningService from './learning-service.js'
-import type { JobRow } from '../lib/db-types.js'
+import * as jobService from './job-service'
+import * as learningService from './learning-service'
+import type { JobRow } from '../lib/db-types'
 
 const runningJobs = new Set<string>()
 

@@ -1,6 +1,6 @@
 import { pgTable, text, timestamp, unique, uuid, index } from 'drizzle-orm/pg-core'
-import { exercises } from './exercises.js'
-import { users } from './users.js'
+import { exercises } from './exercises'
+import { users } from './users'
 
 export const exerciseProgress = pgTable('exercise_progress', {
   id: uuid('id').defaultRandom().primaryKey(),

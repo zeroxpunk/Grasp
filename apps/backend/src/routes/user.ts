@@ -1,6 +1,6 @@
 import { Hono } from 'hono'
-import type { AppEnv } from '../types.js'
-import * as userService from '../services/user-service.js'
+import type { AppEnv } from '../types'
+import * as userService from '../services/user-service'
 
 const app = new Hono<AppEnv>()
 

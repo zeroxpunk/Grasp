@@ -1,4 +1,4 @@
-import type { AuthUser } from './types.js'
+import type { AuthUser } from './types'
 
 export function toAuthUser(user: {
   id: string

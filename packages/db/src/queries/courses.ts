@@ -1,6 +1,6 @@
 import { eq, and, desc } from 'drizzle-orm'
-import { courses } from '../schema/courses.js'
-import { getDb } from '../client.js'
+import { courses } from '../schema/courses'
+import { getDb } from '../client'
 
 export function findById(id: string) {
   return getDb()

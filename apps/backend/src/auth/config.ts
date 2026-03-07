@@ -1,4 +1,4 @@
-import { parsePositiveIntegerOr, requireNonEmptyString } from '../utils/validation.js'
+import { parsePositiveIntegerOr, requireNonEmptyString } from '../utils/validation'
 
 export type AuthProviderMode = 'dev' | 'session'
 

@@ -1,5 +1,5 @@
 import { createAI, type GraspAI, type RegistryConfig } from '@grasp/ai'
-import { resolveBackendAiConfig } from '../utils/ai-config.js'
+import { resolveBackendAiConfig } from '../utils/ai-config'
 
 let ai: GraspAI | null = null
 let aiConfigKey: string | null = null

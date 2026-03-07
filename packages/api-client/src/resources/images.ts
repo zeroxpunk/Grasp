@@ -1,5 +1,5 @@
-import type { GraspHttpClient } from '../client.js'
-import type { GenerateImageRequest, GenerateImageResponse } from '../types.js'
+import type { GraspHttpClient } from '../client'
+import type { GenerateImageRequest, GenerateImageResponse } from '../types'
 
 export class ImagesResource {
   constructor(private http: GraspHttpClient) {}

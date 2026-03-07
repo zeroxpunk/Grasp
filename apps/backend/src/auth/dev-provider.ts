@@ -1,5 +1,5 @@
 import { userQueries } from '@grasp/db'
-import type { AuthProvider, AuthUser } from './types.js'
+import type { AuthProvider, AuthUser } from './types'
 
 const DEV_EMAIL = 'dev@grasp.local'
 

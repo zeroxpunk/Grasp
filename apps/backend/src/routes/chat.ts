@@ -1,17 +1,17 @@
 import { streamEventsToSSE } from '@grasp/ai'
 import { userQueries } from '@grasp/db'
 import { Hono } from 'hono'
-import type { AppEnv } from '../types.js'
-import * as courseService from '../services/course-service.js'
-import * as chatService from '../services/chat-service.js'
-import * as exerciseService from '../services/exercise-service.js'
-import * as lessonService from '../services/lesson-service.js'
-import { getAI } from '../services/ai-service.js'
+import type { AppEnv } from '../types'
+import * as courseService from '../services/course-service'
+import * as chatService from '../services/chat-service'
+import * as exerciseService from '../services/exercise-service'
+import * as lessonService from '../services/lesson-service'
+import { getAI } from '../services/ai-service'
 import {
   isPositiveInteger,
   parsePositiveInteger,
   requireNonEmptyString,
-} from '../utils/validation.js'
+} from '../utils/validation'
 
 const app = new Hono<AppEnv>()
 

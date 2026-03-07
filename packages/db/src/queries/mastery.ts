@@ -1,6 +1,6 @@
 import { eq } from 'drizzle-orm'
-import { mastery } from '../schema/mastery.js'
-import { getDb } from '../client.js'
+import { mastery } from '../schema/mastery'
+import { getDb } from '../client'
 
 export function listByCourse(courseId: string) {
   return getDb().select().from(mastery).where(eq(mastery.courseId, courseId))

@@ -1,6 +1,6 @@
 import { eq, and } from 'drizzle-orm'
-import { imageBlobs } from '../schema/image-blobs.js'
-import { getDb } from '../client.js'
+import { imageBlobs } from '../schema/image-blobs'
+import { getDb } from '../client'
 
 export function findByCourseAndHash(courseId: string, hash: string) {
   return getDb()

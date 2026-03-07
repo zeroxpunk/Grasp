@@ -1,6 +1,6 @@
 import { eq, and, asc } from 'drizzle-orm'
-import { getDb } from '../client.js';
-import { chatMessages } from '../schema/index.js';
+import { getDb } from '../client';
+import { chatMessages } from '../schema/index';
 
 export function listByLessonAndUser(lessonId: string, userId: string) {
   return getDb()

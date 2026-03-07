@@ -1,6 +1,6 @@
 import type { CourseManifest, LessonStatus } from '@grasp/ai'
 import { courseQueries, lessonQueries, masteryQueries } from '@grasp/db'
-import type { CourseRow, LessonRow, MasteryRow } from '../lib/db-types.js'
+import type { CourseRow, LessonRow, MasteryRow } from '../lib/db-types'
 
 export type CourseManifestRecord = CourseManifest & { generationStatus: string }
 

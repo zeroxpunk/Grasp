@@ -1,6 +1,6 @@
 import { eq, and, inArray, sql } from 'drizzle-orm'
-import { exerciseProgress } from '../schema/exercise-progress.js'
-import { getDb } from '../client.js'
+import { exerciseProgress } from '../schema/exercise-progress'
+import { getDb } from '../client'
 
 export function findByExerciseAndUser(exerciseId: string, userId: string) {
   return getDb()

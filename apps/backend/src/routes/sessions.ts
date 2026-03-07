@@ -1,6 +1,6 @@
 import { Hono } from 'hono'
-import type { AppEnv } from '../types.js'
-import * as sessionService from '../services/session-service.js'
+import type { AppEnv } from '../types'
+import * as sessionService from '../services/session-service'
 
 const app = new Hono<AppEnv>()
 

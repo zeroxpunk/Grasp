@@ -1,12 +1,12 @@
 import { Hono } from 'hono'
-import type { AppEnv } from '../types.js'
+import type { AppEnv } from '../types'
 import { courseQueries, lessonQueries, masteryQueries } from '@grasp/db'
 import { normalizeExercises } from '@grasp/ai'
-import * as courseService from '../services/course-service.js'
-import * as exerciseService from '../services/exercise-service.js'
-import { createCourseLessons } from '../services/learning-service.js'
-import { requireNonEmptyString } from '../utils/validation.js'
-import { parsePositiveInteger } from '../utils/validation.js'
+import * as courseService from '../services/course-service'
+import * as exerciseService from '../services/exercise-service'
+import { createCourseLessons } from '../services/learning-service'
+import { requireNonEmptyString } from '../utils/validation'
+import { parsePositiveInteger } from '../utils/validation'
 
 const app = new Hono<AppEnv>()
 

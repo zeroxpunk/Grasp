@@ -1,5 +1,5 @@
 import type { ErrorHandler } from 'hono'
-import type { AppEnv } from '../types.js'
+import type { AppEnv } from '../types'
 
 export const errorHandler: ErrorHandler<AppEnv> = (err, c) => {
   console.error(`[ERROR] ${c.req.method} ${c.req.path}:`, err)

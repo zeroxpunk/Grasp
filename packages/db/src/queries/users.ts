@@ -1,6 +1,6 @@
 import { and, eq } from 'drizzle-orm'
-import { users } from '../schema/users.js'
-import { getDb } from '../client.js'
+import { users } from '../schema/users'
+import { getDb } from '../client'
 
 export function findById(id: string) {
   return getDb().select().from(users).where(eq(users.id, id)).limit(1).then(r => r[0] ?? null)

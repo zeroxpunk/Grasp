@@ -5,13 +5,13 @@ import {
   runExerciseGenerationPipeline,
 } from '@grasp/ai'
 import { courseQueries, lessonQueries, masteryQueries, userQueries } from '@grasp/db'
-import type { CourseRow, LessonRow } from '../lib/db-types.js'
-import * as courseService from './course-service.js'
-import * as exerciseService from './exercise-service.js'
-import * as imageService from './image-service.js'
-import { getAI } from './ai-service.js'
-import { cacheResearch, getCachedResearch } from './research-cache-service.js'
-import type { CourseManifestRecord } from './course-service.js'
+import type { CourseRow, LessonRow } from '../lib/db-types'
+import * as courseService from './course-service'
+import * as exerciseService from './exercise-service'
+import * as imageService from './image-service'
+import { getAI } from './ai-service'
+import { cacheResearch, getCachedResearch } from './research-cache-service'
+import type { CourseManifestRecord } from './course-service'
 
 interface CourseCreationResult {
   courseId: string
