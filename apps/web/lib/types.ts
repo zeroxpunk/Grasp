@@ -1,61 +1,23 @@
-export type LessonStatus =
-  | "not_created"
-  | "not_started"
-  | "started"
-  | "completed"
-  | "failed";
+export type {
+  CourseSummary,
+  CourseManifest,
+  LessonEntry,
+  LessonDetail,
+  AdjacentLesson,
+  ExerciseItem,
+  ExerciseProgressEntry,
+  SessionStats,
+  InsightEntry,
+  EvaluationResult,
+  ChatMessage,
+  ChatInputMessage,
+  StreamChatRequest,
+  Job,
+  JobStatus,
+  GenerateImageResponse,
+} from "@grasp/api-client";
 
-export interface LessonEntry {
-  number: number;
-  slug: string;
-  title: string;
-  concepts: string[];
-  status: LessonStatus;
-}
-
-export interface CourseManifest {
-  slug: string;
-  title: string;
-  description: string;
-  createdAt: string;
-  lessons: LessonEntry[];
-  mastery: Record<string, number>; // concept_key → 0-4
-}
-
-export interface CourseSummary {
-  slug: string;
-  title: string;
-  description: string;
-  createdAt: string;
-  totalLessons: number;
-  completedLessons: number;
-  progress: number; // 0-100
-}
-
-export type { EvaluationOutput } from "./schemas";
-
-export interface Session {
-  start: string;
-  end: string | null;
-  courseSlug?: string;
-}
-
-export interface SessionStats {
-  totalHours: number;
-  currentStreakDays: number;
-  longestStreakDays: number;
-  lastSessionDate: string | null;
-  activeSession: boolean;
-  totalSessions: number;
-}
-
-export interface InsightEntry {
-  date: string;
-  kind: "strength" | "gap" | "preference" | "pattern";
-  observation: string;
-}
-
-// ── Exercise types ──
+// ── Exercise types (rich discriminated union for UI rendering) ──
 
 export type ExerciseType =
   | "text"
@@ -147,3 +109,15 @@ export interface ExerciseProgress {
   attemptedAt: string;
 }
 
+/**
+ * Convert api-client ExerciseItem (flat data bag) to the rich Exercise union type.
+ */
+export function toExercise(item: import("@grasp/api-client").ExerciseItem): Exercise {
+  return {
+    id: item.id,
+    type: item.type as ExerciseType,
+    title: item.title,
+    prompt: item.prompt,
+    ...item.data,
+  } as Exercise;
+}

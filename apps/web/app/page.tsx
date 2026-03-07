@@ -1,13 +1,13 @@
-import { listCourses } from "@/lib/courses";
-import { getSessionStats } from "@/lib/sessions";
+import { getClient } from "@/lib/api";
 import Link from "next/link";
 
 export const dynamic = "force-dynamic";
 
 export default async function Home() {
+  const client = getClient();
   const [courses, sessionStats] = await Promise.all([
-    listCourses(),
-    getSessionStats(),
+    client.courses.list(),
+    client.sessions.stats(),
   ]);
 
   const totalCompleted = courses.reduce((sum, c) => sum + c.completedLessons, 0);
@@ -93,4 +93,3 @@ function Stat({ label, value }: { label: string; value: string }) {
     </div>
   );
 }
-

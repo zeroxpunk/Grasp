@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { ChatMarkdown } from "@/components/chat-markdown";
+import { getClient } from "@/lib/api";
 import type { Exercise, ExerciseProgress } from "@/lib/types";
 
 interface Message {
@@ -71,14 +72,16 @@ export function ChatPanel({
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
+    const client = getClient();
     async function load() {
       try {
-        const res = await fetch(`/api/chat-history?slug=${courseSlug}&lesson=${lessonNumber}`);
-        if (res.ok) {
-          const saved: Message[] = await res.json();
-          if (saved.length > 0) {
-            setMessages(saved);
-          }
+        const saved = await client.chat.getHistory(courseSlug, lessonNumber);
+        if (saved.length > 0) {
+          setMessages(saved.map((m) => ({
+            role: m.role,
+            content: m.content,
+            exerciseId: m.exerciseId ?? undefined,
+          })));
         }
       } catch {
       } finally {
@@ -125,10 +128,13 @@ export function ChatPanel({
   const canComplete = !isStreaming && !evaluating && !preparingNext && allExercisesAttempted && (exchangeCount >= 3 || totalExercises > 0);
 
   function persistChat(msgs: Message[]) {
-    fetch("/api/chat-history", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ courseSlug, lessonNumber, messages: msgs }),
+    const client = getClient();
+    client.chat.saveHistory(courseSlug, lessonNumber, {
+      messages: msgs.map((m) => ({
+        role: m.role,
+        content: m.content,
+        exerciseId: m.exerciseId ?? null,
+      })),
     }).catch(() => {});
   }
 
@@ -149,34 +155,28 @@ export function ChatPanel({
     setMessages([...updatedMessages, assistantMessage]);
 
     try {
-      const response = await fetch("/api/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          messages: updatedMessages,
-          lessonContent,
-          lessonTitle,
-          courseSlug,
-          lessonNumber,
-          exercises,
-          exerciseProgress,
-        }),
+      const client = getClient();
+      const stream = await client.chat.stream({
+        courseSlug,
+        lessonNumber,
+        messages: updatedMessages.map((m) => ({
+          role: m.role,
+          content: m.content,
+          exerciseId: m.exerciseId ?? null,
+        })),
       });
 
-      if (!response.ok) throw new Error("Chat request failed");
-
-      const reader = response.body?.getReader();
-      if (!reader) throw new Error("No response stream");
-
-      const decoder = new TextDecoder();
+      const reader = stream.getReader();
       let accumulated = "";
+      let buffer = "";
 
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
 
-        const chunk = decoder.decode(value, { stream: true });
-        const lines = chunk.split("\n");
+        buffer += value;
+        const lines = buffer.split("\n");
+        buffer = lines.pop() || "";
 
         for (const line of lines) {
           if (line.startsWith("data: ")) {
@@ -445,4 +445,3 @@ export function ChatPanel({
 }
 
 export type { Message, ChatPanelProps };
-

@@ -1,6 +1,6 @@
-import { getCourseManifest, getLessonContent, getAdjacentLessons, getLessonExercises, getLessonExerciseProgress, getLessonChat, writeLessonContent } from "@/lib/courses";
+import { getClient } from "@/lib/api";
 import { renderMarkdown, renderCodeBlock } from "@/lib/render-markdown";
-import { processMarkdownVisuals, hasUnresolvedVisuals, ensureImageManifest } from "@/lib/image-gen";
+import { toExercise } from "@/lib/types";
 import { LessonView } from "./lesson-view";
 
 export const dynamic = "force-dynamic";
@@ -12,7 +12,9 @@ interface Props {
 export default async function LessonPage({ params }: Props) {
   const { slug, lesson: lessonStr } = await params;
   const lessonNumber = parseInt(lessonStr, 10);
-  const manifest = await getCourseManifest(slug);
+  const client = getClient();
+
+  const manifest = await client.courses.get(slug);
   const lessonEntry = manifest.lessons.find((l) => l.number === lessonNumber);
 
   if (!lessonEntry) {
@@ -38,24 +40,13 @@ export default async function LessonPage({ params }: Props) {
     );
   }
 
-  const [data, adjacent, exercises, exerciseProgress, chatHistory] = await Promise.all([
-    getLessonContent(slug, lessonNumber),
-    getAdjacentLessons(manifest, lessonNumber),
-    getLessonExercises(slug, lessonNumber),
-    getLessonExerciseProgress(slug, lessonNumber),
-    getLessonChat(slug, lessonNumber),
-  ]);
+  const detail = await client.lessons.get(slug, lessonNumber);
 
-  let lessonContent = data?.content || null;
-
-  if (lessonContent && hasUnresolvedVisuals(lessonContent)) {
-    lessonContent = await processMarkdownVisuals(lessonContent, slug);
-    writeLessonContent(slug, lessonEntry, lessonContent).catch(() => {});
-  }
-
-  // Backfill manifest for old courses that have resolved image refs but no manifest
-  if (lessonContent) {
-    ensureImageManifest(lessonContent, slug).catch(() => {});
+  const lessonContent = detail.content;
+  const exercises = detail.exercises.map(toExercise);
+  const exerciseProgress: Record<number, { status: "attempted" | "completed"; attemptedAt: string }> = {};
+  for (const [id, entry] of Object.entries(detail.exerciseProgress)) {
+    exerciseProgress[Number(id)] = entry;
   }
 
   const lessonHtml = lessonContent
@@ -63,7 +54,6 @@ export default async function LessonPage({ params }: Props) {
     : null;
 
   // Pre-render Shiki-highlighted code for exercises with code snippets
-  // Skip code-completion (uses plain <pre> with inline inputs) and bug-hunt (needs clickable lines)
   const skipShikiTypes = new Set(["code-completion", "bug-hunt"]);
   const exerciseCodeHtml: Record<number, string> = {};
   for (const ex of exercises) {
@@ -77,25 +67,24 @@ export default async function LessonPage({ params }: Props) {
       courseSlug={slug}
       lessonContent={lessonContent}
       lessonHtml={lessonHtml}
-      lessonTitle={lessonEntry.title}
+      lessonTitle={detail.title}
       lessonNumber={lessonNumber}
       courseTitle={manifest.title}
-      isCompleted={lessonEntry.status === "completed"}
+      isCompleted={detail.status === "completed"}
       prevLesson={
-        adjacent.prev
-          ? { number: adjacent.prev.number, title: adjacent.prev.title }
+        detail.previousLesson
+          ? { number: detail.previousLesson.number, title: detail.previousLesson.title }
           : null
       }
       nextLesson={
-        adjacent.next
-          ? { number: adjacent.next.number, title: adjacent.next.title }
+        detail.nextLesson
+          ? { number: detail.nextLesson.number, title: detail.nextLesson.title }
           : null
       }
       exercises={exercises}
       exerciseCodeHtml={exerciseCodeHtml}
       exerciseProgress={exerciseProgress}
-      hasChatHistory={chatHistory.length > 0}
+      hasChatHistory={(await client.chat.getHistory(slug, lessonNumber)).length > 0}
     />
   );
 }
-

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { getClient } from "@/lib/api";
 
 interface DiagramImageProps {
   description: string;
@@ -15,15 +16,9 @@ export function DiagramImage({ description }: DiagramImageProps) {
 
     async function generate() {
       try {
-        const res = await fetch("/api/generate-image", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ description }),
-        });
+        const client = getClient();
+        const data = await client.images.generate({ description });
 
-        if (!res.ok) throw new Error("Generation failed");
-
-        const data = await res.json();
         if (!cancelled) {
           setDataUrl(data.dataUrl);
           setState("done");
@@ -79,4 +74,3 @@ export function DiagramImage({ description }: DiagramImageProps) {
     </div>
   );
 }
-

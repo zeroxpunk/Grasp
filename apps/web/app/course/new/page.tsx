@@ -2,6 +2,8 @@
 
 import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { getClient } from "@/lib/api";
+import type { JobStatus } from "@/lib/types";
 
 type Step = "idle" | "researching" | "generating" | "writing" | "done" | "error";
 
@@ -27,6 +29,21 @@ const STEP_MESSAGES: Record<string, string[]> = {
     "Finalizing lesson content",
   ],
 };
+
+function jobStatusToStep(status: JobStatus): Step {
+  switch (status) {
+    case "pending":
+      return "researching";
+    case "running":
+      return "generating";
+    case "completed":
+      return "done";
+    case "failed":
+      return "error";
+    default:
+      return "generating";
+  }
+}
 
 export default function NewCoursePage() {
   const [description, setDescription] = useState("");
@@ -83,66 +100,45 @@ export default function NewCoursePage() {
     }, 1000);
 
     try {
-      const res = await fetch("/api/courses", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          description: description.trim(),
-          context: context.trim() || undefined,
-        }),
+      const client = getClient();
+      const { jobId } = await client.courses.create({
+        description: description.trim(),
+        context: context.trim() || undefined,
       });
 
-      if (!res.ok || !res.body) {
-        setStep("error");
-        setError("Failed to connect to API.");
-        if (timerRef.current) clearInterval(timerRef.current);
-        return;
-      }
-
-      const reader = res.body.getReader();
-      const decoder = new TextDecoder();
-      let buffer = "";
-
+      // Poll for job completion
       while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
+        const job = await client.jobs.get(jobId);
+        setStep(jobStatusToStep(job.status));
 
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split("\n");
-        buffer = lines.pop() || "";
-
-        for (const line of lines) {
-          if (!line.startsWith("data: ")) continue;
-          const data = line.slice(6);
-          if (data === "[DONE]") continue;
-
-          try {
-            const parsed = JSON.parse(data);
-
-            if (parsed.error) {
-              setStep("error");
-              setError(parsed.error);
-              if (timerRef.current) clearInterval(timerRef.current);
-              return;
-            }
-
-            if (parsed.step && !parsed.alive) {
-              setStep(parsed.step as Step);
-            }
-
-            if (parsed.step === "done" && parsed.slug) {
-              if (parsed.title) setCourseTitle(parsed.title);
-              if (timerRef.current) clearInterval(timerRef.current);
-              setTimeout(() => {
-                router.push(`/course/${parsed.slug}`);
-              }, 1500);
-            }
-          } catch {}
+        if (job.status === "failed") {
+          setError(job.error || "Course creation failed");
+          if (timerRef.current) clearInterval(timerRef.current);
+          return;
         }
+
+        if (job.status === "completed") {
+          const slug = (job.result as Record<string, unknown>)?.courseSlug as string;
+          if (slug) {
+            // Fetch course title for display
+            try {
+              const manifest = await client.courses.get(slug);
+              setCourseTitle(manifest.title);
+            } catch {}
+
+            if (timerRef.current) clearInterval(timerRef.current);
+            setTimeout(() => {
+              router.push(`/course/${slug}`);
+            }, 1500);
+          }
+          return;
+        }
+
+        await new Promise((r) => setTimeout(r, 2500));
       }
     } catch {
       setStep("error");
-      setError("Connection failed. Is the dev server running?");
+      setError("Connection failed. Is the backend running?");
       if (timerRef.current) clearInterval(timerRef.current);
     }
   }

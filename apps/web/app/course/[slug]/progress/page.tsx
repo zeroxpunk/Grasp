@@ -1,5 +1,4 @@
-import { getCourseManifest, getMasteryLabel } from "@/lib/courses";
-import { getSessionStats } from "@/lib/sessions";
+import { getClient } from "@/lib/api";
 
 export const dynamic = "force-dynamic";
 
@@ -7,11 +6,23 @@ interface Props {
   params: Promise<{ slug: string }>;
 }
 
+function getMasteryLabel(level: number): string {
+  switch (level) {
+    case 0: return "Not started";
+    case 1: return "Beginner";
+    case 2: return "Developing";
+    case 3: return "Proficient";
+    case 4: return "Mastered";
+    default: return "Unknown";
+  }
+}
+
 export default async function CourseProgressPage({ params }: Props) {
   const { slug } = await params;
+  const client = getClient();
   const [manifest, sessionStats] = await Promise.all([
-    getCourseManifest(slug),
-    getSessionStats(slug),
+    client.courses.get(slug),
+    client.sessions.stats(),
   ]);
 
   const completed = manifest.lessons.filter((l) => l.status === "completed").length;
@@ -91,4 +102,3 @@ function formatKey(key: string): string {
     .replace(/_/g, " ")
     .replace(/\b\w/g, (c) => c.toUpperCase());
 }
-

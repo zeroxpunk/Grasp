@@ -8,6 +8,7 @@ import { TextSelectionPopover } from "@/components/text-selection-popover";
 import { ExerciseRenderer } from "@/components/exercises/exercise-renderer";
 import { ImageLightbox } from "@/components/image-lightbox";
 import { TableOfContents } from "@/components/table-of-contents";
+import { getClient } from "@/lib/api";
 import type { Exercise, ExerciseProgress } from "@/lib/types";
 
 interface LessonViewProps {
@@ -126,10 +127,16 @@ export function LessonView({
     figures.forEach((figure) => {
       const img = figure.querySelector<HTMLImageElement>("img.md-img");
       if (!img) return;
-      if (img.complete && img.naturalWidth > 0) return; // already loaded
+      if (img.complete && img.naturalWidth > 0) {
+        figure.classList.add("img-loaded");
+        return;
+      }
 
       figure.classList.add("img-loading");
-      img.addEventListener("load", () => figure.classList.remove("img-loading"), { once: true });
+      img.addEventListener("load", () => {
+        figure.classList.remove("img-loading");
+        figure.classList.add("img-loaded");
+      }, { once: true });
       img.addEventListener("error", () => {
         figure.classList.remove("img-loading");
         figure.classList.add("img-error");
@@ -187,12 +194,8 @@ export function LessonView({
   const handleSelfGrade = useCallback((exerciseId: number, completed: boolean) => {
     const status = completed ? "completed" : "attempted";
     handleExerciseAttempted(exerciseId, status);
-    // Persist to server
-    fetch("/api/exercise-progress", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ courseSlug, lessonNumber, exerciseId, completed }),
-    }).catch(() => {});
+    const client = getClient();
+    client.exercises.updateProgress(courseSlug, lessonNumber, exerciseId, { status }).catch(() => {});
   }, [courseSlug, lessonNumber, handleExerciseAttempted]);
 
   const handleAnswerInChat = useCallback(
@@ -216,12 +219,8 @@ export function LessonView({
   const startSession = async () => {
     setChatOpen(true);
     try {
-      await fetch("/api/sessions", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "start", courseSlug }),
-      });
-        await fetch(`/api/courses/${courseSlug}`, { method: "GET" });
+      const client = getClient();
+      await client.sessions.start(courseSlug);
     } catch {}
   };
 
@@ -242,24 +241,16 @@ export function LessonView({
     const summary = chatSummary + buildExerciseSummary();
 
     try {
-      await fetch("/api/sessions", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "end" }),
+      const client = getClient();
+      await client.sessions.end();
+
+      const result = await client.evaluate.evaluate({
+        conversationSummary: summary,
+        lessonNumber,
+        courseSlug,
       });
 
-      const evalRes = await fetch("/api/evaluate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          conversationSummary: summary,
-          lessonNumber,
-          courseSlug,
-        }),
-      });
-      const evalData = await evalRes.json();
-
-      if (evalData.evaluation?.lessonComplete) {
+      if (result.evaluation?.lessonComplete) {
         setCompleted(true);
 
         if (nextLesson) {
@@ -288,25 +279,17 @@ export function LessonView({
     const summary = `The learner studied the lesson content and completed all exercises via the interactive UI:\n${exerciseLines.join("\n")}`;
 
     try {
+      const client = getClient();
       // End any active session (best-effort)
-      await fetch("/api/sessions", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "end" }),
-      }).catch(() => {});
+      await client.sessions.end().catch(() => {});
 
-      const evalRes = await fetch("/api/evaluate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          conversationSummary: summary,
-          lessonNumber,
-          courseSlug,
-        }),
+      const result = await client.evaluate.evaluate({
+        conversationSummary: summary,
+        lessonNumber,
+        courseSlug,
       });
-      const evalData = await evalRes.json();
 
-      if (evalData.evaluation?.lessonComplete) {
+      if (result.evaluation?.lessonComplete) {
         setCompleted(true);
         if (nextLesson) {
           setEvaluating(false);
@@ -325,13 +308,13 @@ export function LessonView({
   };
 
   async function waitForLesson(slug: string, lesson: number) {
+    const client = getClient();
     for (let i = 0; i < 60; i++) {
-      const res = await fetch(`/api/courses/${slug}`);
-      if (res.ok) {
-        const manifest = await res.json();
-        const entry = manifest.lessons?.find((l: { number: number; status: string }) => l.number === lesson);
+      try {
+        const manifest = await client.courses.get(slug);
+        const entry = manifest.lessons.find((l) => l.number === lesson);
         if (entry && entry.status !== "not_created") return;
-      }
+      } catch {}
       await new Promise((r) => setTimeout(r, 2000));
     }
   }
@@ -712,24 +695,11 @@ function MissingExercises({
 
     async function generate() {
       try {
-        const res = await fetch("/api/regenerate-exercises", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ courseSlug, lessonNumber }),
-        });
-        const data = await res.json();
-        if (!res.ok) {
-          setStatus("error");
-          setError(data.error || "Failed to generate exercises");
-          return;
-        }
+        const client = getClient();
+        const { jobId } = await client.exercises.regenerate(courseSlug, lessonNumber);
+        await client.jobs.poll(jobId);
         setStatus("done");
-        // Reload exercises from the server
-        const exRes = await fetch(`/api/courses/${courseSlug}`);
-        if (exRes.ok) {
-          // Trigger a page refresh to pick up new exercises
-          window.location.reload();
-        }
+        window.location.reload();
       } catch (err) {
         setStatus("error");
         setError(err instanceof Error ? err.message : "Unknown error");
@@ -743,20 +713,11 @@ function MissingExercises({
     setStatus("generating");
     setError(null);
     attempted.current = false;
-    // Re-trigger by forcing effect — but since we use ref, we need a different approach
     (async () => {
       try {
-        const res = await fetch("/api/regenerate-exercises", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ courseSlug, lessonNumber }),
-        });
-        const data = await res.json();
-        if (!res.ok) {
-          setStatus("error");
-          setError(data.error || "Failed to generate exercises");
-          return;
-        }
+        const client = getClient();
+        const { jobId } = await client.exercises.regenerate(courseSlug, lessonNumber);
+        await client.jobs.poll(jobId);
         setStatus("done");
         window.location.reload();
       } catch (err) {
@@ -830,4 +791,3 @@ function EmptyContent({ onStart }: { onStart?: () => void }) {
     </div>
   );
 }
-

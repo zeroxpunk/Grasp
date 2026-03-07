@@ -1,4 +1,4 @@
-import { getCourseInsights, getCourseManifest } from "@/lib/courses";
+import { getClient } from "@/lib/api";
 
 export const dynamic = "force-dynamic";
 
@@ -15,9 +15,10 @@ const KIND_LABELS: Record<string, { label: string; color: string }> = {
 
 export default async function CourseInsightsPage({ params }: Props) {
   const { slug } = await params;
+  const client = getClient();
   const [insights, manifest] = await Promise.all([
-    getCourseInsights(slug),
-    getCourseManifest(slug),
+    client.insights.list(slug),
+    client.courses.get(slug),
   ]);
 
   return (
@@ -39,20 +40,20 @@ export default async function CourseInsightsPage({ params }: Props) {
         </section>
       ) : (
         <section className="space-y-3">
-          {insights.map((ins, i) => {
+          {insights.map((ins) => {
             const meta = KIND_LABELS[ins.kind] || { label: ins.kind, color: "text-zinc-500" };
             return (
               <div
-                key={i}
+                key={ins.id}
                 className="flex items-baseline gap-3 py-3 border-b border-zinc-800/50"
               >
                 <span className={`text-[11px] font-medium uppercase tracking-wide shrink-0 w-20 ${meta.color}`}>
                   {meta.label}
                 </span>
                 <p className="text-sm text-zinc-400 flex-1">{ins.observation}</p>
-                {ins.date && (
-                  <span className="text-[11px] text-zinc-700 shrink-0">{ins.date}</span>
-                )}
+                <span className="text-[11px] text-zinc-700 shrink-0">
+                  {new Date(ins.createdAt).toLocaleDateString()}
+                </span>
               </div>
             );
           })}
@@ -61,4 +62,3 @@ export default async function CourseInsightsPage({ params }: Props) {
     </div>
   );
 }
-

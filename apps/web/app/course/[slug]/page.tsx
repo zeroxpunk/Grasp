@@ -1,4 +1,4 @@
-import { getCourseManifest, getLessonExercises, getLessonExerciseProgress } from "@/lib/courses";
+import { getClient } from "@/lib/api";
 import Link from "next/link";
 
 export const dynamic = "force-dynamic";
@@ -9,7 +9,8 @@ interface Props {
 
 export default async function CourseOverviewPage({ params }: Props) {
   const { slug } = await params;
-  const manifest = await getCourseManifest(slug);
+  const client = getClient();
+  const manifest = await client.courses.get(slug);
 
   const completed = manifest.lessons.filter((l) => l.status === "completed").length;
   const progress = manifest.lessons.length > 0
@@ -22,15 +23,16 @@ export default async function CourseOverviewPage({ params }: Props) {
     manifest.lessons
       .filter((l) => l.status !== "not_created")
       .map(async (l) => {
-        const [exercises, progress] = await Promise.all([
-          getLessonExercises(slug, l.number),
-          getLessonExerciseProgress(slug, l.number),
-        ]);
-        if (exercises.length > 0) {
-          const completedCount = Object.values(progress).filter(
-            (p) => p.status === "completed"
-          ).length;
-          exerciseStats[l.number] = { total: exercises.length, completed: completedCount };
+        try {
+          const detail = await client.lessons.get(slug, l.number);
+          if (detail.exercises.length > 0) {
+            const completedCount = Object.values(detail.exerciseProgress).filter(
+              (p) => p.status === "completed"
+            ).length;
+            exerciseStats[l.number] = { total: detail.exercises.length, completed: completedCount };
+          }
+        } catch {
+          // lesson may not be fully generated yet
         }
       })
   );
@@ -135,4 +137,3 @@ function StatusBadge({ status }: { status: string }) {
       return null;
   }
 }
-
