@@ -240,10 +240,11 @@ body {
   margin: 2rem 0;
   max-width: 520px;
   position: relative;
+  aspect-ratio: 2 / 1;
+  overflow: hidden;
+  border-radius: 8px;
 }
 .md-figure.img-loading {
-  min-height: 200px;
-  border-radius: 8px;
   border: 1px solid #1e2030;
   background: linear-gradient(90deg, #1a1b2e 25%, #22243a 50%, #1a1b2e 75%);
   background-size: 200% 100%;
@@ -253,33 +254,48 @@ body {
   opacity: 0;
 }
 .md-figure.img-loading .md-figcaption {
-  display: block;
-  text-align: center;
-  padding: 0 1rem;
-  position: absolute;
-  bottom: 50%;
-  left: 0;
-  right: 0;
-  transform: translateY(50%);
-  color: #555;
-  font-size: 13px;
-}
-.md-figure.img-error {
-  min-height: 80px;
-  border-radius: 8px;
-  border: 1px dashed #333;
   display: flex;
   align-items: center;
   justify-content: center;
+  position: absolute;
+  inset: 0;
+  color: #555;
+  font-size: 13px;
+  padding: 1rem;
+  text-align: center;
+}
+.md-figure.img-error {
+  border: 1px dashed #2a2d3e;
+  background: #13141f;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
 }
 .md-figure.img-error .md-img {
   display: none;
 }
+.md-figure.img-error::before {
+  content: '';
+  display: block;
+  width: 32px;
+  height: 32px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 24 24' fill='none' stroke='%23444' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='3' width='18' height='18' rx='2' ry='2'/%3E%3Ccircle cx='8.5' cy='8.5' r='1.5'/%3E%3Cpath d='M21 15l-5-5L5 21'/%3E%3C/svg%3E");
+  background-size: contain;
+  opacity: 0.6;
+}
 .md-figure.img-error .md-figcaption {
   display: block;
-  color: #555;
-  font-size: 13px;
-  padding: 1rem;
+  color: #4a4d5e;
+  font-size: 12px;
+  padding: 0 1.5rem;
+  text-align: center;
+  line-height: 1.4;
+}
+/* Image loaded successfully — let natural aspect ratio take over */
+.md-figure.img-loaded {
+  aspect-ratio: auto;
 }
 @keyframes img-shimmer {
   0% { background-position: 200% 0; }
@@ -287,6 +303,8 @@ body {
 }
 .md-img {
   width: 100%;
+  height: 100%;
+  object-fit: contain;
   border-radius: 8px;
   border: 1px solid #1e2030;
   background: #fff;
