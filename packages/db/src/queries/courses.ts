@@ -11,6 +11,15 @@ export function findById(id: string) {
     .then(r => r[0] ?? null)
 }
 
+export function findBySlug(slug: string) {
+  return getDb()
+    .select()
+    .from(courses)
+    .where(eq(courses.slug, slug))
+    .limit(1)
+    .then(r => r[0] ?? null)
+}
+
 export function findByUserAndSlug(userId: string, slug: string) {
   return getDb()
     .select()
