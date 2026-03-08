@@ -221,7 +221,13 @@ export interface AuthSessionResponse {
   user: AuthUser
 }
 
+export interface TokenRequestOptions {
+  forceRefresh?: boolean
+}
+
+export type TokenProvider = (options?: TokenRequestOptions) => string | Promise<string>
+
 export interface ClientConfig {
   baseUrl: string
-  token?: string | (() => string | Promise<string>)
+  token?: string | TokenProvider
 }

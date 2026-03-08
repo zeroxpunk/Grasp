@@ -1,4 +1,4 @@
-import type { ClientConfig } from './types'
+import type { ClientConfig, TokenProvider, TokenRequestOptions } from './types'
 
 export class ApiError extends Error {
   constructor(
@@ -13,16 +13,16 @@ export class ApiError extends Error {
 
 export class GraspHttpClient {
   private baseUrl: string
-  private token?: string | (() => string | Promise<string>)
+  private token?: string | TokenProvider
 
   constructor(config: ClientConfig) {
     this.baseUrl = config.baseUrl.replace(/\/$/, '')
     this.token = config.token
   }
 
-  private async getToken(): Promise<string | undefined> {
+  private async getToken(options?: TokenRequestOptions): Promise<string | undefined> {
     if (!this.token) return undefined
-    if (typeof this.token === 'function') return await this.token()
+    if (typeof this.token === 'function') return await this.token(options)
     return this.token
   }
 
@@ -73,7 +73,7 @@ export class GraspHttpClient {
     }
 
     if (res.status === 401 && this.canRetryAuth()) {
-      token = await this.getToken()
+      token = await this.getToken({ forceRefresh: true })
       try {
         res = await this.fetchWithAuth(method, path, body, signal, 'application/json', token)
       } catch (err) {
@@ -128,7 +128,7 @@ export class GraspHttpClient {
     }
 
     if (res.status === 401 && this.canRetryAuth()) {
-      token = await this.getToken()
+      token = await this.getToken({ forceRefresh: true })
       try {
         res = await this.fetchWithAuth('POST', path, body, signal, 'text/event-stream', token)
       } catch (err) {
