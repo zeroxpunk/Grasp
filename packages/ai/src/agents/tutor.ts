@@ -1,5 +1,6 @@
 import { streamText, stepCountIs } from "ai";
 import { z } from "zod";
+import { resolveProviderOptions } from "../execution.js";
 import type { ModelRegistry } from "../registry.js";
 import type { StreamEvent } from "../shared/types.js";
 import {
@@ -11,6 +12,9 @@ import {
 import { createLogger } from "../shared/logger.js";
 
 const log = createLogger("tutor");
+const TUTOR_MAX_OUTPUT_TOKENS = 2048;
+const TUTOR_THINKING_BUDGET = 32768;
+const TUTOR_MAX_STEPS = 3;
 
 export interface TutorParams extends TutorSystemPromptParams {
   messages: TutorPromptMessage[];
@@ -30,11 +34,15 @@ export async function* execute(
   const { messages, ...promptParams } = params;
   const systemPrompt = buildTutorSystemPrompt(promptParams);
   const userPrompt = buildTutorConversationPrompt(messages);
+  const model = registry.resolve("primary");
+  const providerOptions = resolveProviderOptions(model, TUTOR_THINKING_BUDGET);
 
   const result = streamText({
-    model: registry.resolve("primary"),
+    model,
     system: systemPrompt,
     prompt: userPrompt,
+    maxOutputTokens: TUTOR_MAX_OUTPUT_TOKENS,
+    ...(providerOptions ? { providerOptions } : {}),
     tools: {
       update_exercise_status: {
         description: "Update the status of an exercise after evaluating the learner's answer. Call this whenever you evaluate an exercise attempt — mark as 'completed' if the answer demonstrates correct understanding, or 'attempted' if the answer has significant errors.",
@@ -48,7 +56,7 @@ export async function* execute(
         },
       },
     },
-    stopWhen: stepCountIs(3),
+    stopWhen: stepCountIs(TUTOR_MAX_STEPS),
   });
 
   try {

@@ -15,7 +15,7 @@ function budgetToReasoningEffort(budget: number): "low" | "medium" | "high" {
   return "high";
 }
 
-function resolveProviderOptions(
+export function resolveProviderOptions(
   model: LanguageModel,
   budget?: number,
 ): ProviderOptions | undefined {
