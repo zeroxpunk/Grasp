@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect, useCallback, useMemo } from "react";
+import { memo, startTransition, useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { ChatMarkdown } from "@/components/chat-markdown";
 import { useGraspClient } from "@/lib/grasp-client-provider";
 import type { Exercise, ExerciseProgress } from "@/lib/types";
@@ -12,7 +12,6 @@ interface Message {
 }
 
 interface ChatPanelProps {
-  lessonContent: string;
   lessonTitle: string;
   courseSlug: string;
   lessonNumber: number;
@@ -49,8 +48,116 @@ function ChatExerciseWidget({ exercise }: { exercise: Exercise }) {
   );
 }
 
+function ChatLoadingSkeleton() {
+  const shimmerClass =
+    "animate-[img-shimmer_1.8s_ease-in-out_infinite] bg-[linear-gradient(90deg,#171923_25%,#22243a_50%,#171923_75%)] bg-[length:200%_100%]";
+
+  return (
+    <div className="space-y-4 px-4 py-4">
+      <div className="max-w-[78%] rounded-2xl border border-zinc-800/70 bg-zinc-950/70 p-4">
+        <div className={`h-3 rounded-full ${shimmerClass}`} />
+        <div className={`mt-2 h-3 w-[72%] rounded-full ${shimmerClass}`} />
+        <div className={`mt-2 h-3 w-[46%] rounded-full ${shimmerClass}`} />
+      </div>
+      <div className="ml-auto max-w-[72%] rounded-2xl border border-zinc-800/70 bg-white/[0.03] p-4">
+        <div className={`h-3 rounded-full ${shimmerClass}`} />
+        <div className={`mt-2 h-3 w-[58%] rounded-full ${shimmerClass}`} />
+      </div>
+      <div className="max-w-[82%] rounded-2xl border border-zinc-800/70 bg-zinc-950/70 p-4">
+        <div className={`h-3 rounded-full ${shimmerClass}`} />
+        <div className={`mt-2 h-3 w-[84%] rounded-full ${shimmerClass}`} />
+        <div className={`mt-2 h-3 w-[51%] rounded-full ${shimmerClass}`} />
+      </div>
+    </div>
+  );
+}
+
+const ChatTimeline = memo(function ChatTimeline({
+  historyLoaded,
+  messages,
+  isStreaming,
+  exercises,
+  scrollContainerRef,
+  messagesEndRef,
+}: {
+  historyLoaded: boolean;
+  messages: Message[];
+  isStreaming: boolean;
+  exercises?: Exercise[];
+  scrollContainerRef: React.RefObject<HTMLDivElement | null>;
+  messagesEndRef: React.RefObject<HTMLDivElement | null>;
+}) {
+  return (
+    <div
+      ref={scrollContainerRef}
+      className="flex-1 min-h-0 overflow-y-auto overscroll-y-contain [scrollbar-gutter:stable] touch-pan-y"
+    >
+      {!historyLoaded ? (
+        <ChatLoadingSkeleton />
+      ) : messages.length === 0 ? (
+        <div className="flex h-full items-center justify-center px-8">
+          <div className="text-center">
+            <p className="text-[13px] text-zinc-500 leading-relaxed">
+              Ask a question about this lesson
+            </p>
+            <p className="mt-1.5 text-[11px] text-zinc-700">
+              or select text and click &ldquo;Ask about this&rdquo;
+            </p>
+          </div>
+        </div>
+      ) : (
+        <div className="px-2 py-3 sm:px-3">
+          {messages.map((message, i) => (
+            <div
+              key={i}
+              className={`mb-2 rounded-2xl border border-zinc-900/60 ${
+                message.role === "user"
+                  ? "ml-auto max-w-[88%] bg-white/[0.04] sm:max-w-[82%]"
+                  : "max-w-[92%] bg-zinc-950/70 sm:max-w-[86%]"
+              }`}
+            >
+              <div className="px-4 pb-3 pt-3.5">
+                <p className="mb-1 text-[10px] uppercase tracking-[0.16em] text-zinc-600">
+                  {message.role === "user" ? "You" : "Tutor"}
+                </p>
+                <div
+                  className={`text-[13px] leading-[1.7] break-words ${
+                    message.role === "user"
+                      ? "text-zinc-200 whitespace-pre-wrap"
+                      : "text-zinc-400"
+                  }`}
+                >
+                  {message.role === "assistant" ? (
+                    <ChatMarkdown content={message.content} />
+                  ) : message.exerciseId && exercises ? (
+                    <ChatExerciseWidget
+                      exercise={exercises.find((e) => e.id === message.exerciseId)!}
+                    />
+                  ) : (
+                    message.content
+                  )}
+                  {message.role === "assistant" &&
+                    isStreaming &&
+                    i === messages.length - 1 && (
+                      <span
+                        className="ml-0.5 inline-block h-[14px] w-[5px] align-text-bottom bg-zinc-500"
+                        style={{
+                          animation: "cursor-blink 1s step-end infinite",
+                        }}
+                      />
+                    )}
+                </div>
+              </div>
+            </div>
+          ))}
+          <div ref={messagesEndRef} />
+        </div>
+      )}
+    </div>
+  );
+});
+
 export function ChatPanel({
-  lessonContent,
   lessonTitle,
   courseSlug,
   lessonNumber,
@@ -69,19 +176,23 @@ export function ChatPanel({
   const [input, setInput] = useState("");
   const [isStreaming, setIsStreaming] = useState(false);
   const [historyLoaded, setHistoryLoaded] = useState(false);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const stickToBottomRef = useRef(true);
 
   useEffect(() => {
     async function load() {
       try {
         const saved = await client.chat.getHistory(courseSlug, lessonNumber);
         if (saved.length > 0) {
-          setMessages(saved.map((m) => ({
-            role: m.role,
-            content: m.content,
-            exerciseId: m.exerciseId ?? undefined,
-          })));
+          startTransition(() => {
+            setMessages(saved.map((m) => ({
+              role: m.role,
+              content: m.content,
+              exerciseId: m.exerciseId ?? undefined,
+            })));
+          });
         }
       } catch {
       } finally {
@@ -100,13 +211,35 @@ export function ChatPanel({
     return () => clearTimeout(timer);
   }, [historyLoaded]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const scrollToBottom = useCallback(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  const scrollToBottom = useCallback((behavior: ScrollBehavior = "smooth") => {
+    const container = scrollContainerRef.current;
+    if (container) {
+      container.scrollTo({ top: container.scrollHeight, behavior });
+      return;
+    }
+
+    messagesEndRef.current?.scrollIntoView({ behavior });
   }, []);
 
   useEffect(() => {
-    scrollToBottom();
-  }, [messages, scrollToBottom]);
+    const container = scrollContainerRef.current;
+    if (!container) return;
+
+    const updateStickiness = () => {
+      const distanceFromBottom =
+        container.scrollHeight - container.scrollTop - container.clientHeight;
+      stickToBottomRef.current = distanceFromBottom < 96;
+    };
+
+    updateStickiness();
+    container.addEventListener("scroll", updateStickiness, { passive: true });
+    return () => container.removeEventListener("scroll", updateStickiness);
+  }, []);
+
+  useEffect(() => {
+    if (!stickToBottomRef.current) return;
+    scrollToBottom(isStreaming ? "auto" : "smooth");
+  }, [messages, isStreaming, scrollToBottom]);
 
   const exchangeCount = messages.filter((m) => m.role === "user").length;
 
@@ -140,6 +273,7 @@ export function ChatPanel({
   async function sendMessage(text: string) {
     if (!text || isStreaming) return;
 
+    stickToBottomRef.current = true;
     const userMessage: Message = { role: "user", content: text };
     const updatedMessages = [...messages, userMessage];
     setMessages(updatedMessages);
@@ -196,25 +330,29 @@ export function ChatPanel({
                 "";
               if (token) {
                 accumulated += token;
-                setMessages((prev) => {
-                  const updated = [...prev];
-                  updated[updated.length - 1] = {
-                    role: "assistant",
-                    content: accumulated,
-                  };
-                  return updated;
+                startTransition(() => {
+                  setMessages((prev) => {
+                    const updated = [...prev];
+                    updated[updated.length - 1] = {
+                      role: "assistant",
+                      content: accumulated,
+                    };
+                    return updated;
+                  });
                 });
               }
             } catch {
               if (data && data !== "[DONE]") {
                 accumulated += data;
-                setMessages((prev) => {
-                  const updated = [...prev];
-                  updated[updated.length - 1] = {
-                    role: "assistant",
-                    content: accumulated,
-                  };
-                  return updated;
+                startTransition(() => {
+                  setMessages((prev) => {
+                    const updated = [...prev];
+                    updated[updated.length - 1] = {
+                      role: "assistant",
+                      content: accumulated,
+                    };
+                    return updated;
+                  });
                 });
               }
             }
@@ -262,6 +400,7 @@ export function ChatPanel({
   }
 
   function injectQuestion(text: string) {
+    stickToBottomRef.current = true;
     setInput(text);
     inputRef.current?.focus();
   }
@@ -274,6 +413,7 @@ export function ChatPanel({
     const codeStr = ex.code ? `\n\n\`\`\`${ex.language || ""}\n${ex.code}\n\`\`\`` : "";
     const content = `I'd like to attempt Exercise #${exercise.id}${typeLabel}: ${exercise.title}\n\n${exercise.prompt}${codeStr}`;
     const userMessage: Message = { role: "user", content, exerciseId };
+    stickToBottomRef.current = true;
     setMessages((prev) => {
       const updated = [...prev, userMessage];
       persistChat(updated);
@@ -301,9 +441,15 @@ export function ChatPanel({
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
-    <div className="flex flex-col h-full bg-[var(--surface)]">
-      <div className="shrink-0 flex items-center justify-between h-11 px-4 border-b border-zinc-800/60">
-        <span className="text-[13px] text-zinc-400 select-none">Chat</span>
+    <div className="flex h-full min-h-0 flex-col bg-[var(--surface)] max-md:bg-[linear-gradient(180deg,rgba(19,20,26,0.98),rgba(12,13,18,1))]">
+      <div className="shrink-0 border-b border-zinc-800/60 bg-zinc-950/70 px-4 py-3 backdrop-blur">
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <span className="text-[13px] text-zinc-200 select-none">Tutor chat</span>
+            <p className="mt-0.5 text-[11px] text-zinc-600">
+              {lessonTitle}
+            </p>
+          </div>
         <div className="flex items-center gap-2">
           <span className="text-[11px] text-zinc-600 select-none">
             {evaluating
@@ -326,69 +472,19 @@ export function ChatPanel({
             </button>
           )}
         </div>
+        </div>
       </div>
 
-      <div className="flex-1 min-h-0 overflow-y-auto">
-        {messages.length === 0 ? (
-          <div className="flex items-center justify-center h-full">
-            <div className="text-center px-8">
-              <p className="text-[13px] text-zinc-600 leading-relaxed">
-                Ask a question about this lesson
-              </p>
-              <p className="text-[11px] text-zinc-700 mt-1.5">
-                or select text and click &ldquo;Ask about this&rdquo;
-              </p>
-            </div>
-          </div>
-        ) : (
-          <div>
-            {messages.map((message, i) => (
-              <div
-                key={i}
-                className={
-                  message.role === "user"
-                    ? "px-4 py-3.5 bg-white/[0.02]"
-                    : "px-4 py-3.5"
-                }
-              >
-                <p className="text-[11px] text-zinc-600 mb-1">
-                  {message.role === "user" ? "You" : "Assistant"}
-                </p>
-                <div
-                  className={`text-[13px] leading-[1.7] break-words ${
-                    message.role === "user"
-                      ? "text-zinc-200 whitespace-pre-wrap"
-                      : "text-zinc-400"
-                  }`}
-                >
-                  {message.role === "assistant" ? (
-                    <ChatMarkdown content={message.content} />
-                  ) : message.exerciseId && exercises ? (
-                    <ChatExerciseWidget
-                      exercise={exercises.find((e) => e.id === message.exerciseId)!}
-                    />
-                  ) : (
-                    message.content
-                  )}
-                  {message.role === "assistant" &&
-                    isStreaming &&
-                    i === messages.length - 1 && (
-                      <span
-                        className="inline-block w-[5px] h-[14px] bg-zinc-500 ml-0.5 align-text-bottom"
-                        style={{
-                          animation: "cursor-blink 1s step-end infinite",
-                        }}
-                      />
-                    )}
-                </div>
-              </div>
-            ))}
-            <div ref={messagesEndRef} />
-          </div>
-        )}
-      </div>
+      <ChatTimeline
+        historyLoaded={historyLoaded}
+        messages={messages}
+        isStreaming={isStreaming}
+        exercises={exercises}
+        scrollContainerRef={scrollContainerRef}
+        messagesEndRef={messagesEndRef}
+      />
 
-      <div className="shrink-0 px-3 pb-3 pt-2">
+      <div className="shrink-0 border-t border-zinc-900/60 bg-zinc-950/85 px-3 pt-2 backdrop-blur pb-[calc(0.75rem+env(safe-area-inset-bottom))]">
         {canComplete && (
           <button
             onClick={handleComplete}
@@ -420,9 +516,12 @@ export function ChatPanel({
             onKeyDown={handleKeyDown}
             placeholder="Ask about this lesson..."
             rows={1}
-            disabled={evaluating}
-            className="w-full resize-none bg-transparent text-[13px] text-zinc-200 placeholder:text-zinc-600 outline-none px-3 pt-2.5 pb-0 leading-relaxed disabled:opacity-40"
-            style={{ minHeight: "22px" }}
+            disabled={evaluating || preparingNext}
+            onFocus={() => {
+              stickToBottomRef.current = true;
+              requestAnimationFrame(() => scrollToBottom("auto"));
+            }}
+            className="max-h-36 min-h-[22px] w-full resize-none overflow-y-auto bg-transparent px-3 pt-2.5 pb-0 text-[13px] leading-relaxed text-zinc-200 outline-none placeholder:text-zinc-600 disabled:opacity-40"
           />
           <div className="flex items-center justify-between px-3 pb-2 pt-1">
             <span className="text-[11px] text-zinc-700 select-none">

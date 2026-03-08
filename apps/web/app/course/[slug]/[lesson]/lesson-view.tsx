@@ -325,8 +325,10 @@ export function LessonView({
   useEffect(() => {
     if (chatOpen) {
       document.body.style.overflow = "hidden";
+      document.documentElement.style.overflow = "hidden";
       return () => {
         document.body.style.overflow = "";
+        document.documentElement.style.overflow = "";
       };
     }
   }, [chatOpen]);
@@ -352,9 +354,12 @@ export function LessonView({
 
   if (chatOpen) {
     return (
-      <div className="fixed inset-x-0 bottom-0 top-14 z-30 flex flex-col md:flex-row">
+      <div className="fixed inset-x-0 top-14 z-30 flex h-[calc(100dvh-3.5rem)] min-h-0 flex-col md:flex-row">
         <LessonProgressBar progress={totalProgress} />
-        <div ref={scrollRef} className={`flex-1 min-w-0 overflow-y-auto ${chatCollapsed ? "" : "max-md:hidden"}`}>
+        <div
+          ref={scrollRef}
+          className={`flex-1 min-h-0 min-w-0 overflow-y-auto overscroll-y-contain ${chatCollapsed ? "" : "max-md:hidden"}`}
+        >
           <div className="max-w-3xl mx-auto px-4 sm:px-6 py-8 pb-24 xl:max-w-none xl:grid xl:grid-cols-[10rem_minmax(0,48rem)] xl:justify-center xl:gap-8">
             <aside className="hidden xl:block">
               <div className="sticky top-8">
@@ -432,7 +437,7 @@ export function LessonView({
         ) : null}
 
         <div
-          className={`shrink-0 border-l border-zinc-800 relative max-md:!w-full max-md:border-l-0 max-md:flex-1 ${chatCollapsed ? "hidden" : ""}`}
+          className={`relative min-h-0 shrink-0 border-l border-zinc-800 max-md:flex-1 max-md:min-h-0 max-md:!w-full max-md:border-l-0 ${chatCollapsed ? "hidden" : "flex"}`}
           style={{ width: chatWidth, animation: "panel-in 200ms ease-out" }}
         >
           {/* Drag handle */}
@@ -463,7 +468,6 @@ export function LessonView({
             }}
           />
           <ChatPanel
-            lessonContent={lessonContent || ""}
             lessonTitle={lessonTitle}
             courseSlug={courseSlug}
             lessonNumber={lessonNumber}
