@@ -354,7 +354,7 @@ export function LessonView({
 
   if (chatOpen) {
     return (
-      <div className="fixed inset-x-0 top-14 z-30 flex h-[calc(100dvh-3.5rem)] min-h-0 flex-col md:flex-row">
+      <div className="fixed inset-x-0 bottom-0 top-14 z-30 flex flex-col md:flex-row max-md:h-[calc(100dvh-3.5rem)] max-md:min-h-0 max-md:bottom-auto">
         <LessonProgressBar progress={totalProgress} />
         <div
           ref={scrollRef}
@@ -437,7 +437,7 @@ export function LessonView({
         ) : null}
 
         <div
-          className={`relative min-h-0 shrink-0 border-l border-zinc-800 max-md:flex-1 max-md:min-h-0 max-md:!w-full max-md:border-l-0 ${chatCollapsed ? "hidden" : "flex"}`}
+          className={`shrink-0 border-l border-zinc-800 relative max-md:!w-full max-md:border-l-0 max-md:flex-1 max-md:min-h-0 ${chatCollapsed ? "hidden" : ""}`}
           style={{ width: chatWidth, animation: "panel-in 200ms ease-out" }}
         >
           {/* Drag handle */}
@@ -468,7 +468,6 @@ export function LessonView({
             }}
           />
           <ChatPanel
-            lessonTitle={lessonTitle}
             courseSlug={courseSlug}
             lessonNumber={lessonNumber}
             initialMessage={initialMessage}
