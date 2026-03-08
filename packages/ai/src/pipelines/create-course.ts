@@ -59,8 +59,7 @@ export async function runCourseCreationPipeline(
     concepts: lesson.concepts,
   }));
 
-  onProgress?.("generating-first-lesson");
-  const rawContent = await ai.generateInitialLessonContent({
+  const initialLessonParams = {
     description,
     researchMaterials: research,
     context: context ?? null,
@@ -73,15 +72,21 @@ export async function runCourseCreationPipeline(
     lessonNumber: firstLesson.number || 1,
     lessonTitle: enhancedTitles[0] || firstLesson.title,
     concepts: firstLesson.concepts,
-  }, {
+  };
+
+  onProgress?.("generating-first-lesson");
+  const rawFirstLessonContent = await ai.generateInitialLessonContent(initialLessonParams, {
     maxOutputTokens: 65536,
     thinkingBudget: 32768,
   });
 
   onProgress?.("reviewing");
   const firstLessonContent = await ai.reviewContent(
-    { content: rawContent },
-    { thinkingBudget: 10000 },
+    { content: rawFirstLessonContent },
+    {
+      maxOutputTokens: 65536,
+      thinkingBudget: 10000,
+    },
   );
 
   onProgress?.("generating-exercises");

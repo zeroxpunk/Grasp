@@ -1,5 +1,6 @@
 import type { GraspAI } from "../index.js";
 import type { CourseManifest, Exercise } from "../shared/types.js";
+import { searchLessonMaterials } from "./lesson-search.js";
 
 export interface LessonGenerationInput {
   manifest: CourseManifest;
@@ -26,21 +27,31 @@ export async function runLessonGenerationPipeline(
     throw new Error(`Lesson ${lessonNumber} not found in manifest`);
   }
 
-  onProgress?.("generating-content");
-  const rawContent = await ai.generateLessonContent({
+  const searchContext = await searchLessonMaterials(ai, { manifest, lessonNumber });
+
+  const effectiveCourseContext = [courseContext, searchContext]
+    .filter((value) => value && value.trim().length > 0)
+    .join("\n\n");
+
+  const lessonParams = {
     manifest,
     globalMemory,
     courseMemory,
-    courseContext,
+    courseContext: effectiveCourseContext,
     lessonNumber,
-  }, {
-    webSearch: true,
+  };
+
+  onProgress?.("generating-content");
+  const rawContent = await ai.generateLessonContent(lessonParams, {
+    webSearch: false,
+    maxOutputTokens: 65536,
+    thinkingBudget: 32768,
   });
 
   onProgress?.("reviewing");
   const content = await ai.reviewContent(
     { content: rawContent },
-    { thinkingBudget: 10000 },
+    { maxOutputTokens: 65536, thinkingBudget: 10000 },
   );
 
   onProgress?.("generating-exercises");

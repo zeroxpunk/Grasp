@@ -41,11 +41,20 @@ const GATEWAY_PROVIDER_PREFIX: Record<LanguageProviderKind, string> = {
 
 type GatewayInstance = ReturnType<typeof createGateway>;
 type WebSearchTool = ReturnType<GatewayInstance["tools"]["perplexitySearch"]>;
+export interface WebSearchToolConfig {
+  maxResults?: number;
+  maxTokensPerPage?: number;
+  maxTokens?: number;
+  country?: string;
+  searchDomainFilter?: string[];
+  searchLanguageFilter?: string[];
+  searchRecencyFilter?: "day" | "week" | "month" | "year";
+}
 
 export interface ModelRegistry {
   resolve(role: ModelRole): LanguageModel;
   imageModel(modelId: string): ImageModel;
-  webSearchTool(): WebSearchTool;
+  webSearchTool(config?: WebSearchToolConfig): WebSearchTool;
   defaultModels(): Record<ModelRole, string>;
 }
 
@@ -133,8 +142,8 @@ export function createModelRegistry(config: RegistryConfig): ModelRegistry {
       return getGoogle().image(modelId);
     },
 
-    webSearchTool() {
-      return getGateway().tools.perplexitySearch();
+    webSearchTool(config) {
+      return getGateway().tools.perplexitySearch(config);
     },
 
     defaultModels() {

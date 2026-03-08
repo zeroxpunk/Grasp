@@ -59,6 +59,23 @@ export async function executeGenerateText(opts: {
     ? { tools: opts.tools, stopWhen: stepCountIs(opts.maxSteps || 5) }
     : {};
 
+  function buildIncompleteToolLoopError(params: {
+    finishReason: string;
+    text: string;
+    toolCalls: Array<{ toolName: string }>;
+    toolResultsCount: number;
+  }) {
+    return new Error(
+      [
+        `[${opts.label || "generateText"}]`,
+        `Incomplete tool generation: finishReason=${params.finishReason}.`,
+        `toolCalls=${params.toolCalls.map((toolCall) => toolCall.toolName).join(",") || "none"}.`,
+        `toolResults=${params.toolResultsCount}.`,
+        `textLength=${params.text.length}.`,
+      ].join(" "),
+    );
+  }
+
   if (opts.onProgress) {
     const result = streamText({
       model: opts.model,
@@ -80,8 +97,27 @@ export async function executeGenerateText(opts: {
       }
     }
 
+    const finishReason = await result.finishReason;
+    const toolCalls = await result.toolCalls;
+    const toolResults = await result.toolResults;
+
     stop();
-    log.info(`${opts.label || "generateText"} done`, { length: accumulated.length });
+    log.info(`${opts.label || "generateText"} done`, {
+      length: accumulated.length,
+      finishReason,
+      toolCalls: toolCalls.map((toolCall) => toolCall.toolName),
+      toolResults: toolResults.length,
+    });
+
+    if (opts.tools && finishReason === "tool-calls" && accumulated.trim().length === 0) {
+      throw buildIncompleteToolLoopError({
+        finishReason,
+        text: accumulated,
+        toolCalls,
+        toolResultsCount: toolResults.length,
+      });
+    }
+
     return accumulated;
   }
 
@@ -94,8 +130,27 @@ export async function executeGenerateText(opts: {
     ...toolOpts,
   });
 
+  const finishReason = result.finishReason;
+  const toolCalls = result.toolCalls;
+  const toolResults = result.toolResults;
+
   stop();
-  log.info(`${opts.label || "generateText"} done`, { length: result.text.length });
+  log.info(`${opts.label || "generateText"} done`, {
+    length: result.text.length,
+    finishReason,
+    toolCalls: toolCalls.map((toolCall) => toolCall.toolName),
+    toolResults: toolResults.length,
+  });
+
+  if (opts.tools && finishReason === "tool-calls" && result.text.trim().length === 0) {
+    throw buildIncompleteToolLoopError({
+      finishReason,
+      text: result.text,
+      toolCalls,
+      toolResultsCount: toolResults.length,
+    });
+  }
+
   return result.text;
 }
 
