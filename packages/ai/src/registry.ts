@@ -51,9 +51,9 @@ export interface ModelRegistry {
 
 const DEFAULT_MODELS: Record<TextProviderKind, Record<ModelRole, string>> = {
   anthropic: {
-    primary: "claude-opus-4-6",
-    research: "claude-sonnet-4-6",
-    fast: "claude-haiku-4-5",
+    primary: "claude-opus-4.6",
+    research: "claude-sonnet-4.6",
+    fast: "claude-haiku-4.5",
   },
   openai: {
     primary: "gpt-5.4",
@@ -109,16 +109,20 @@ export function createModelRegistry(config: RegistryConfig): ModelRegistry {
     return MODEL_PREFIXES.find(([p]) => modelId.startsWith(p))?.[1] ?? config.textProvider.kind;
   }
 
+  function toGatewayId(modelId: string): string {
+    if (modelId.includes("/")) return modelId;
+    return `${GATEWAY_PROVIDER_PREFIX[detectProvider(modelId)]}/${modelId}`;
+  }
+
   return {
     resolve(role) {
       const id = modelIds[role];
-      const provider = detectProvider(id);
 
       if (config.gatewayApiKey) {
-        return getGateway()(`${GATEWAY_PROVIDER_PREFIX[provider]}/${id}`);
+        return getGateway()(toGatewayId(id));
       }
 
-      switch (provider) {
+      switch (detectProvider(id)) {
         case "anthropic": return getAnthropic()(id);
         case "google":    return getGoogle()(id);
         case "openai":    return getOpenAI()(id);
