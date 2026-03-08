@@ -32,10 +32,10 @@ export interface RegistryConfig {
 }
 
 type LanguageProviderKind = TextProviderKind | "google";
-type WebSearchTool = ReturnType<typeof gateway.tools.perplexitySearch>;
 
 const GATEWAY_PROVIDER_PREFIX: Record<LanguageProviderKind, string> = {
   anthropic: "anthropic",
+  openai: "openai",
   google: "google",
 };
 
