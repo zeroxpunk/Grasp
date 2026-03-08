@@ -170,7 +170,9 @@ export function LessonView({
     setChatOpen(true);
     try {
       await client.sessions.start(courseSlug);
-    } catch {}
+    } catch (error) {
+      console.error("Failed to start session:", error);
+    }
   }, [client, courseSlug]);
 
   const handleAskAbout = useCallback(
@@ -178,7 +180,6 @@ export function LessonView({
       const question = `Explain this from the lesson:\n\n"${text}"`;
       if (!chatOpen) {
         setInitialMessage(question);
-        setChatOpen(true);
         startSession();
       } else {
         const inject = (window as unknown as Record<string, unknown>)
@@ -209,7 +210,6 @@ export function LessonView({
     (exercise: Exercise) => {
       if (!chatOpen) {
         setInitialExerciseId(exercise.id);
-        setChatOpen(true);
         startSession();
       } else {
         if (chatCollapsed) setChatCollapsed(false);
@@ -222,6 +222,16 @@ export function LessonView({
     },
     [chatOpen, chatCollapsed, startSession]
   );
+
+  useEffect(() => {
+    if (!hasChatHistory || !chatOpen) {
+      return;
+    }
+
+    void client.sessions.start(courseSlug).catch((error) => {
+      console.error("Failed to start session:", error);
+    });
+  }, [chatOpen, client, courseSlug, hasChatHistory]);
 
   const buildExerciseSummary = useCallback(() => {
     const lines = liveExercises
@@ -277,9 +287,6 @@ export function LessonView({
     const summary = `The learner studied the lesson content and completed all exercises via the interactive UI:\n${exerciseLines.join("\n")}`;
 
     try {
-      // End any active session (best-effort)
-      await client.sessions.end().catch(() => {});
-
       const result = await client.evaluate.evaluate({
         conversationSummary: summary,
         lessonNumber,
@@ -328,7 +335,6 @@ export function LessonView({
     const handler = (question: string) => {
       if (!chatOpen) {
         setInitialMessage(question);
-        setChatOpen(true);
         startSession();
       } else {
         if (chatCollapsed) setChatCollapsed(false);

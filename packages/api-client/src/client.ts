@@ -26,31 +26,60 @@ export class GraspHttpClient {
     return this.token
   }
 
-  async request<T>(method: string, path: string, body?: unknown, signal?: AbortSignal): Promise<T> {
-    const token = await this.getToken()
+  private buildHeaders(token: string | undefined, hasBody: boolean, accept: string): Record<string, string> {
     const headers: Record<string, string> = {
-      'Accept': 'application/json',
+      'Accept': accept,
     }
 
     if (token) {
       headers['Authorization'] = `Bearer ${token}`
     }
 
-    if (body !== undefined) {
+    if (hasBody) {
       headers['Content-Type'] = 'application/json'
     }
 
+    return headers
+  }
+
+  private async fetchWithAuth(
+    method: string,
+    path: string,
+    body: unknown,
+    signal: AbortSignal | undefined,
+    accept: string,
+    token: string | undefined,
+  ): Promise<Response> {
+    return fetch(`${this.baseUrl}${path}`, {
+      method,
+      headers: this.buildHeaders(token, body !== undefined, accept),
+      body: body !== undefined ? JSON.stringify(body) : undefined,
+      signal,
+    })
+  }
+
+  private canRetryAuth(): boolean {
+    return typeof this.token === 'function'
+  }
+
+  async request<T>(method: string, path: string, body?: unknown, signal?: AbortSignal): Promise<T> {
+    let token = await this.getToken()
     let res: Response
     try {
-      res = await fetch(`${this.baseUrl}${path}`, {
-        method,
-        headers,
-        body: body !== undefined ? JSON.stringify(body) : undefined,
-        signal,
-      })
+      res = await this.fetchWithAuth(method, path, body, signal, 'application/json', token)
     } catch (err) {
       if (err instanceof DOMException && err.name === 'AbortError') throw err
       throw new Error(`Network error: ${err instanceof Error ? err.message : String(err)}`)
+    }
+
+    if (res.status === 401 && this.canRetryAuth()) {
+      token = await this.getToken()
+      try {
+        res = await this.fetchWithAuth(method, path, body, signal, 'application/json', token)
+      } catch (err) {
+        if (err instanceof DOMException && err.name === 'AbortError') throw err
+        throw new Error(`Network error: ${err instanceof Error ? err.message : String(err)}`)
+      }
     }
 
     if (!res.ok) {
@@ -89,27 +118,23 @@ export class GraspHttpClient {
   }
 
   async stream(path: string, body: unknown, signal?: AbortSignal): Promise<ReadableStream<string>> {
-    const token = await this.getToken()
-    const headers: Record<string, string> = {
-      'Content-Type': 'application/json',
-      'Accept': 'text/event-stream',
-    }
-
-    if (token) {
-      headers['Authorization'] = `Bearer ${token}`
-    }
-
+    let token = await this.getToken()
     let res: Response
     try {
-      res = await fetch(`${this.baseUrl}${path}`, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify(body),
-        signal,
-      })
+      res = await this.fetchWithAuth('POST', path, body, signal, 'text/event-stream', token)
     } catch (err) {
       if (err instanceof DOMException && err.name === 'AbortError') throw err
       throw new Error(`Network error: ${err instanceof Error ? err.message : String(err)}`)
+    }
+
+    if (res.status === 401 && this.canRetryAuth()) {
+      token = await this.getToken()
+      try {
+        res = await this.fetchWithAuth('POST', path, body, signal, 'text/event-stream', token)
+      } catch (err) {
+        if (err instanceof DOMException && err.name === 'AbortError') throw err
+        throw new Error(`Network error: ${err instanceof Error ? err.message : String(err)}`)
+      }
     }
 
     if (!res.ok) {

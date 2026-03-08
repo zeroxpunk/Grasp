@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useContext, useMemo } from "react";
-import { useSession } from "next-auth/react";
+import { getSession } from "next-auth/react";
 import { GraspClient } from "@grasp/api-client";
 
 const GraspClientContext = createContext<GraspClient | null>(null);
@@ -12,14 +12,17 @@ export function GraspClientProvider({
 }: {
   children: React.ReactNode;
 }) {
-  const { data: session } = useSession();
-
   const client = useMemo(() => {
     const baseUrl =
       process.env.NEXT_PUBLIC_GRASP_API_URL || "http://localhost:4000";
-    const token = session?.graspAccessToken ?? devToken;
-    return new GraspClient({ baseUrl, token });
-  }, [session?.graspAccessToken]);
+    return new GraspClient({
+      baseUrl,
+      token: async () => {
+        const session = await getSession();
+        return session?.graspAccessToken ?? devToken ?? "";
+      },
+    });
+  }, []);
 
   return (
     <GraspClientContext.Provider value={client}>
