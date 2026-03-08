@@ -16,7 +16,7 @@ export function GraspClientProvider({
   const client = useMemo(() => {
     const baseUrl =
       process.env.NEXT_PUBLIC_GRASP_API_URL || "http://localhost:4000";
-    const token = session?.graspAccessToken ?? process.env.NEXT_PUBLIC_GRASP_API_TOKEN ?? undefined;
+    const token = session?.graspAccessToken ?? undefined;
     return new GraspClient({ baseUrl, token });
   }, [session?.graspAccessToken]);
 
