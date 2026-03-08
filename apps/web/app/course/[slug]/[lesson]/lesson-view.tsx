@@ -24,7 +24,6 @@ interface LessonViewProps {
   exercises: Exercise[];
   exerciseCodeHtml: Record<number, string>;
   exerciseProgress: Record<number, ExerciseProgress>;
-  hasChatHistory: boolean;
 }
 
 export function LessonView({
@@ -40,13 +39,12 @@ export function LessonView({
   exercises,
   exerciseCodeHtml,
   exerciseProgress,
-  hasChatHistory,
 }: LessonViewProps) {
   const client = useGraspClient();
   const contentRef = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const [lightbox, setLightbox] = useState<{ images: { src: string; alt: string }[]; index: number } | null>(null);
-  const [chatOpen, setChatOpen] = useState(hasChatHistory);
+  const [chatOpen, setChatOpen] = useState(false);
   const [chatCollapsed, setChatCollapsed] = useState(false);
   const [chatWidth, setChatWidth] = useState(460);
   const [initialMessage, setInitialMessage] = useState<string | null>(null);
@@ -222,16 +220,6 @@ export function LessonView({
     },
     [chatOpen, chatCollapsed, startSession]
   );
-
-  useEffect(() => {
-    if (!hasChatHistory || !chatOpen) {
-      return;
-    }
-
-    void client.sessions.start(courseSlug).catch((error) => {
-      console.error("Failed to start session:", error);
-    });
-  }, [chatOpen, client, courseSlug, hasChatHistory]);
 
   const buildExerciseSummary = useCallback(() => {
     const lines = liveExercises

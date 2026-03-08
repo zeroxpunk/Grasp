@@ -84,7 +84,6 @@ export default async function LessonPage({ params }: Props) {
       exercises={exercises}
       exerciseCodeHtml={exerciseCodeHtml}
       exerciseProgress={exerciseProgress}
-      hasChatHistory={(await client.chat.getHistory(slug, lessonNumber)).length > 0}
     />
   );
 }
