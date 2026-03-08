@@ -1,7 +1,8 @@
 import { createAnthropic } from "@ai-sdk/anthropic";
 import { createGoogleGenerativeAI } from "@ai-sdk/google";
 import { createOpenAI } from "@ai-sdk/openai";
-import { gateway, type ImageModel, type LanguageModel } from "ai";
+import { createGateway, type ImageModel, type LanguageModel } from "ai";
+
 import { lazy } from "./shared/utils.js";
 
 export type ModelRole = "primary" | "research" | "fast";
@@ -26,11 +27,20 @@ export type TextProviderConfig =
 export interface RegistryConfig {
   textProvider: TextProviderConfig;
   googleApiKey?: string;
+  gatewayApiKey?: string;
   models?: Partial<Record<ModelRole, string>>;
 }
 
 type LanguageProviderKind = TextProviderKind | "google";
 type WebSearchTool = ReturnType<typeof gateway.tools.perplexitySearch>;
+
+const GATEWAY_PROVIDER_PREFIX: Record<LanguageProviderKind, string> = {
+  anthropic: "anthropic",
+  google: "google",
+};
+
+type GatewayInstance = ReturnType<typeof createGateway>;
+type WebSearchTool = ReturnType<GatewayInstance["tools"]["perplexitySearch"]>;
 
 export interface ModelRegistry {
   resolve(role: ModelRole): LanguageModel;
@@ -66,6 +76,10 @@ const MODEL_PREFIXES: [prefix: string, provider: LanguageProviderKind][] = [
 export function createModelRegistry(config: RegistryConfig): ModelRegistry {
   const modelIds = resolveModelIds(config);
 
+  const getGateway = lazy(() =>
+    createGateway({ apiKey: config.gatewayApiKey }),
+  );
+
   const getAnthropic = lazy(() => {
     if (config.textProvider.kind !== "anthropic") {
       throw new Error("Anthropic model requested but no Anthropic API key configured");
@@ -98,8 +112,13 @@ export function createModelRegistry(config: RegistryConfig): ModelRegistry {
   return {
     resolve(role) {
       const id = modelIds[role];
+      const provider = detectProvider(id);
 
-      switch (detectProvider(id)) {
+      if (config.gatewayApiKey) {
+        return getGateway()(`${GATEWAY_PROVIDER_PREFIX[provider]}/${id}`);
+      }
+
+      switch (provider) {
         case "anthropic": return getAnthropic()(id);
         case "google":    return getGoogle()(id);
         case "openai":    return getOpenAI()(id);
@@ -107,11 +126,14 @@ export function createModelRegistry(config: RegistryConfig): ModelRegistry {
     },
 
     imageModel(modelId) {
+      if (config.gatewayApiKey) {
+        return getGateway().image(`google/${modelId}`);
+      }
       return getGoogle().image(modelId);
     },
 
     webSearchTool() {
-      return gateway.tools.perplexitySearch();
+      return getGateway().tools.perplexitySearch();
     },
 
     defaultModels() {

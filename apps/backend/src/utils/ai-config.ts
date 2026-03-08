@@ -9,6 +9,7 @@ export function resolveBackendAiConfig(env: BackendEnv = process.env): RegistryC
   return {
     textProvider: resolveTextProvider(env),
     googleApiKey: readEnvValue(env, 'GOOGLE_AI_API_KEY'),
+    gatewayApiKey: readEnvValue(env, 'AI_GATEWAY_API_KEY'),
     ...(hasModelOverrides(models) ? { models } : {}),
   }
 }

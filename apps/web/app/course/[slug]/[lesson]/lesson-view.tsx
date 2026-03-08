@@ -166,6 +166,13 @@ export function LessonView({
   const isDragging = useRef(false);
   const router = useRouter();
 
+  const startSession = useCallback(async () => {
+    setChatOpen(true);
+    try {
+      await client.sessions.start(courseSlug);
+    } catch {}
+  }, [client, courseSlug]);
+
   const handleAskAbout = useCallback(
     (text: string) => {
       const question = `Explain this from the lesson:\n\n"${text}"`;
@@ -181,7 +188,7 @@ export function LessonView({
         }
       }
     },
-    [chatOpen] // eslint-disable-line react-hooks/exhaustive-deps
+    [chatOpen, startSession]
   );
 
   const handleExerciseAttempted = useCallback((exerciseId: number, status?: "attempted" | "completed") => {
@@ -196,7 +203,7 @@ export function LessonView({
     const status = completed ? "completed" : "attempted";
     handleExerciseAttempted(exerciseId, status);
     client.exercises.updateProgress(courseSlug, lessonNumber, exerciseId, { status }).catch(() => {});
-  }, [courseSlug, lessonNumber, handleExerciseAttempted]);
+  }, [client, courseSlug, lessonNumber, handleExerciseAttempted]);
 
   const handleAnswerInChat = useCallback(
     (exercise: Exercise) => {
@@ -213,15 +220,8 @@ export function LessonView({
         }
       }
     },
-    [chatOpen, chatCollapsed] // eslint-disable-line react-hooks/exhaustive-deps
+    [chatOpen, chatCollapsed, startSession]
   );
-
-  const startSession = async () => {
-    setChatOpen(true);
-    try {
-      await client.sessions.start(courseSlug);
-    } catch {}
-  };
 
   const buildExerciseSummary = useCallback(() => {
     const lines = liveExercises

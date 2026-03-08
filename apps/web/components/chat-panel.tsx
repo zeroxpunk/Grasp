@@ -89,7 +89,7 @@ export function ChatPanel({
       }
     }
     load();
-  }, [courseSlug, lessonNumber]);
+  }, [client, courseSlug, lessonNumber]);
 
   useEffect(() => {
     if (!historyLoaded) return;
@@ -292,7 +292,7 @@ export function ChatPanel({
       delete w.__chatPanelInjectExercise;
       delete w.__chatPanelSendMessage;
     };
-  }); // eslint-disable-line react-hooks/exhaustive-deps
+  });
 
   useEffect(() => {
     if (initialExerciseId != null) {

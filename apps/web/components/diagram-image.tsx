@@ -30,7 +30,7 @@ export function DiagramImage({ description }: DiagramImageProps) {
 
     generate();
     return () => { cancelled = true; };
-  }, [description]);
+  }, [client, description]);
 
   if (state === "loading") {
     return (
