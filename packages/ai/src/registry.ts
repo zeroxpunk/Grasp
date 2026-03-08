@@ -130,9 +130,6 @@ export function createModelRegistry(config: RegistryConfig): ModelRegistry {
     },
 
     imageModel(modelId) {
-      if (config.gatewayApiKey) {
-        return getGateway().image(`google/${modelId}`);
-      }
       return getGoogle().image(modelId);
     },
 
