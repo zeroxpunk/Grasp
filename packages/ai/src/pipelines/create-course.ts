@@ -74,6 +74,8 @@ export async function runCourseCreationPipeline(
     concepts: firstLesson.concepts,
   };
 
+  const courseMemory = ai.prompts.courseMemory(plan.title);
+
   onProgress?.("generating-first-lesson");
   const rawFirstLessonContent = await ai.generateInitialLessonContent(initialLessonParams, {
     maxOutputTokens: 65536,
@@ -101,6 +103,7 @@ export async function runCourseCreationPipeline(
       mastery: {},
       courseTitle: plan.title,
       courseDescription: plan.description,
+      courseMemory,
     }, {
       maxOutputTokens: 32768,
       thinkingBudget: 10000,
@@ -108,9 +111,6 @@ export async function runCourseCreationPipeline(
   } catch {
     // Best-effort: return empty if exercise generation fails
   }
-
-  const courseMemory = ai.prompts.courseMemory(plan.title);
-
   onProgress?.("done");
 
   return {

@@ -8,6 +8,7 @@ export interface LessonGenerationInput {
   courseMemory: string;
   courseContext: string;
   lessonNumber: number;
+  previousExerciseSummary?: string;
 }
 
 export interface LessonGenerationOutput {
@@ -20,7 +21,14 @@ export async function runLessonGenerationPipeline(
   input: LessonGenerationInput,
   onProgress?: (step: string) => void,
 ): Promise<LessonGenerationOutput> {
-  const { manifest, globalMemory, courseMemory, courseContext, lessonNumber } = input;
+  const {
+    manifest,
+    globalMemory,
+    courseMemory,
+    courseContext,
+    lessonNumber,
+    previousExerciseSummary,
+  } = input;
 
   const lesson = manifest.lessons.find((l) => l.number === lessonNumber);
   if (!lesson) {
@@ -29,21 +37,49 @@ export async function runLessonGenerationPipeline(
 
   const searchContext = await searchLessonMaterials(ai, { manifest, lessonNumber });
 
-  const effectiveCourseContext = [courseContext, searchContext]
+  const previousLessons = manifest.lessons
+    .filter((entry) => entry.number < lessonNumber)
+    .filter((entry) => entry.status === "completed" || entry.status === "started")
+    .map((entry) => `- Lesson ${entry.number}: ${entry.title} [${entry.status}]`);
+
+  const masteryText = Object.entries(manifest.mastery)
+    .map(([concept, score]) => `- ${concept}: ${score}`)
+    .join("\n");
+
+  const adaptiveContext = [
+    courseContext.trim(),
+    masteryText
+      ? `## Current Mastery Levels\n${masteryText}`
+      : "## Current Mastery Levels\nNo mastery data yet.",
+    `## Course Memory\n${courseMemory.trim() || "No course memory yet."}`,
+    previousLessons.length > 0
+      ? `## Previous Lessons Completed\n${previousLessons.join("\n")}`
+      : "## Previous Lessons Completed\nNone yet.",
+  ]
     .filter((value) => value && value.trim().length > 0)
     .join("\n\n");
 
   const lessonParams = {
-    manifest,
+    description: manifest.description,
+    researchMaterials: searchContext,
+    context: adaptiveContext || null,
     globalMemory,
-    courseMemory,
-    courseContext: effectiveCourseContext,
+    coursePlan: {
+      title: manifest.title,
+      description: manifest.description,
+      lessons: manifest.lessons.map((entry) => ({
+        number: entry.number,
+        title: entry.title,
+        concepts: entry.concepts,
+      })),
+    },
     lessonNumber,
+    lessonTitle: lesson.title,
+    concepts: lesson.concepts,
   };
 
   onProgress?.("generating-content");
-  const rawContent = await ai.generateLessonContent(lessonParams, {
-    webSearch: false,
+  const rawContent = await ai.generateInitialLessonContent(lessonParams, {
     maxOutputTokens: 65536,
     thinkingBudget: 32768,
   });
@@ -67,6 +103,10 @@ export async function runLessonGenerationPipeline(
       courseTitle: manifest.title,
       courseDescription: manifest.description,
       courseMemory,
+      previousExerciseSummary,
+    }, {
+      maxOutputTokens: 32768,
+      thinkingBudget: 10000,
     });
   } catch {
     // Best-effort

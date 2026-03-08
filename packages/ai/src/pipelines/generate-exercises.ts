@@ -8,6 +8,7 @@ export interface ExerciseGenerationInput {
   lessonTitle: string;
   concepts: string[];
   lessonContent: string;
+  previousExerciseSummary?: string;
 }
 
 export async function runExerciseGenerationPipeline(
@@ -24,5 +25,6 @@ export async function runExerciseGenerationPipeline(
     courseTitle: input.manifest.title,
     courseDescription: input.manifest.description,
     courseMemory: input.courseMemory,
+    previousExerciseSummary: input.previousExerciseSummary,
   });
 }

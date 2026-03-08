@@ -8,6 +8,7 @@ export interface ExerciseGenerationPromptParams {
   courseTitle: string;
   courseDescription: string;
   courseMemory?: string;
+  previousExerciseSummary?: string;
 }
 
 export function buildExerciseGenerationPrompt(
@@ -23,6 +24,7 @@ export function buildExerciseGenerationPrompt(
     courseTitle,
     courseDescription,
     courseMemory,
+    previousExerciseSummary,
   } = params;
 
   const masteryValues = Object.values(mastery);
@@ -95,8 +97,10 @@ ${lessonNumber >= 3 ? "- At least 1 synthesis-tier exercise (text or tradeoff-an
 - All code must be syntactically valid in the specified language.
 - Every prompt must be self-contained — the learner should be able to attempt the exercise with just the prompt and any provided code.
 - Never use emojis.
+- Use prior exercise history to personalize difficulty and format, but every new exercise must still test the CURRENT lesson concepts.
+- Avoid near-duplicate exercise titles, prompts, and overused formats from prior lessons unless deliberate reinforcement is necessary.
 
-${courseMemory ? `## Learner Insights\n<course-memory>\n${courseMemory}\n</course-memory>\nAdapt exercise difficulty and topics based on known strengths and gaps.\n` : ""}## Lesson Content (for context)
+${courseMemory ? `## Learner Insights\n<course-memory>\n${courseMemory}\n</course-memory>\nAdapt exercise difficulty and topics based on known strengths and gaps.\n\n` : ""}${previousExerciseSummary ? `## Previous Exercise History\n<previous-exercises>\n${previousExerciseSummary}\n</previous-exercises>\nUse this to personalize exercise formats, reinforce weak spots, and avoid repetition.\n\n` : ""}## Lesson Content (for context)
 <lesson-content>
 ${lessonContent}
 </lesson-content>

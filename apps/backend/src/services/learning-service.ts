@@ -25,6 +25,58 @@ interface LessonGenerationResult {
   exerciseCount: number
 }
 
+function compactText(value: string, maxLength = 120) {
+  const normalized = value.replace(/\s+/g, ' ').trim()
+  if (normalized.length <= maxLength) {
+    return normalized
+  }
+  return `${normalized.slice(0, maxLength - 1)}…`
+}
+
+async function buildPreviousExerciseSummary(
+  courseId: string,
+  userId: string,
+  beforeLessonNumber: number,
+): Promise<string | undefined> {
+  const previousLessons = (await lessonQueries.listByCourse(courseId))
+    .filter((lesson) => lesson.number < beforeLessonNumber)
+    .filter((lesson) => lesson.status !== 'not_created')
+
+  if (previousLessons.length === 0) {
+    return undefined
+  }
+
+  const sections = await Promise.all(previousLessons.map(async (lesson) => {
+    const [exercises, progress] = await Promise.all([
+      exerciseService.listExercises(lesson.id),
+      exerciseService.getProgressMap(lesson.id, userId),
+    ])
+
+    if (exercises.length === 0) {
+      return null
+    }
+
+    const attemptedCount = exercises.filter((exercise) => progress[exercise.id]).length
+    const completedCount = exercises.filter((exercise) => progress[exercise.id]?.status === 'completed').length
+    const lines = exercises.map((exercise) => {
+      const status = progress[exercise.id]?.status ?? 'not_attempted'
+      return [
+        `- [${status}] ${exercise.type} — ${exercise.title}`,
+        compactText(exercise.prompt, 140),
+      ].join(': ')
+    })
+
+    return [
+      `### Lesson ${lesson.number}: ${lesson.title}`,
+      `Attempted ${attemptedCount}/${exercises.length}; completed ${completedCount}/${exercises.length}`,
+      ...lines,
+    ].join('\n')
+  }))
+
+  const summary = sections.filter(Boolean).join('\n\n')
+  return summary || undefined
+}
+
 function sanitizeSlug(value: string) {
   return value
     .toLowerCase()
@@ -217,6 +269,7 @@ export async function generateLesson(
       courseMemory: course.memory,
       courseContext: course.context,
       lessonNumber,
+      previousExerciseSummary: await buildPreviousExerciseSummary(course.id, course.userId, lessonNumber),
     })
 
     const content = await imageService.processMarkdownVisuals(
@@ -263,6 +316,7 @@ export async function regenerateExercises(
     lessonTitle: lesson.title,
     concepts: lesson.concepts,
     lessonContent: lesson.content,
+    previousExerciseSummary: await buildPreviousExerciseSummary(course.id, course.userId, lessonNumber),
   })
 
   await exerciseService.replaceExercises(lesson.id, exercises)
