@@ -1,9 +1,12 @@
-import { auth, signIn } from "@/lib/auth";
+import { auth, signIn, signOut } from "@/lib/auth";
 import { redirect } from "next/navigation";
 
 export default async function LoginPage() {
   const session = await auth();
-  if (session) redirect("/");
+  if (session?.graspAccessToken) redirect("/");
+  if (session) {
+    await signOut({ redirect: false });
+  }
 
   return (
     <div className="flex min-h-[calc(100vh-3.5rem)] items-center justify-center">
