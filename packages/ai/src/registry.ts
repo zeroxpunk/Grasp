@@ -39,16 +39,19 @@ const GATEWAY_PROVIDER_PREFIX: Record<LanguageProviderKind, string> = {
   google: "google",
 };
 
-type GatewayInstance = ReturnType<typeof createGateway>;
-type WebSearchTool = ReturnType<GatewayInstance["tools"]["perplexitySearch"]>;
+type AnthropicInstance = ReturnType<typeof createAnthropic>;
+type WebSearchTool = ReturnType<AnthropicInstance["tools"]["webSearch_20250305"]>;
 export interface WebSearchToolConfig {
-  maxResults?: number;
-  maxTokensPerPage?: number;
-  maxTokens?: number;
-  country?: string;
-  searchDomainFilter?: string[];
-  searchLanguageFilter?: string[];
-  searchRecencyFilter?: "day" | "week" | "month" | "year";
+  maxUses?: number;
+  allowedDomains?: string[];
+  blockedDomains?: string[];
+  userLocation?: {
+    type: "approximate";
+    city?: string;
+    region?: string;
+    country?: string;
+    timezone?: string;
+  };
 }
 
 export interface ModelRegistry {
@@ -143,8 +146,8 @@ export function createModelRegistry(config: RegistryConfig): ModelRegistry {
     },
 
     webSearchTool(toolConfig) {
-      if (!config.gatewayApiKey) return null;
-      return getGateway().tools.perplexitySearch(toolConfig);
+      if (config.textProvider.kind !== "anthropic") return null;
+      return getAnthropic().tools.webSearch_20250305(toolConfig);
     },
 
     defaultModels() {

@@ -10,31 +10,34 @@ type JSONValue = string | number | boolean | null | JSONValue[] | { [k: string]:
 type ProviderOptions = Record<string, Record<string, JSONValue>>;
 
 interface SearchResult {
-  title?: string;
+  type?: string;
+  title?: string | null;
   url?: string;
+  pageAge?: string | null;
   snippet?: string;
-  date?: string;
-  last_updated?: string;
 }
 
 /**
  * Format raw tool outputs into a concise text summary suitable for re-injection
- * into a prompt. Keeps only title/url/snippet from search results and caps total length.
+ * into a prompt. Handles both Claude web search results (array of results)
+ * and legacy formats ({ results: [...] }).
  */
 function formatToolResultsForRetry(outputs: unknown[]): string {
   const lines: string[] = [];
 
   for (const output of outputs) {
-    const obj = output as Record<string, unknown> | null;
-    const results = (obj?.results ?? []) as SearchResult[];
+    const results: SearchResult[] = Array.isArray(output)
+      ? output as SearchResult[]
+      : ((output as Record<string, unknown> | null)?.results ?? []) as SearchResult[];
 
     for (const r of results) {
-      const title = r.title?.trim();
+      const title = typeof r.title === "string" ? r.title.trim() : undefined;
       const url = r.url?.trim();
       const snippet = r.snippet?.replace(/\s+/g, " ").trim().slice(0, 300);
-      if (!title && !snippet) continue;
+      if (!title && !url) continue;
       if (title) lines.push(`### ${title}`);
       if (url) lines.push(url);
+      if (r.pageAge) lines.push(`Date: ${r.pageAge}`);
       if (snippet) lines.push(snippet);
       lines.push("");
     }
@@ -275,8 +278,8 @@ export async function executeGenerateText(opts: {
         toolResultsCount: toolResults.length,
       }));
 
-      // Provider-defined tools (e.g. gateway perplexitySearch) execute server-side
-      // and return results in a single step without the model synthesizing text.
+      // Provider-defined tools (e.g. Anthropic web search) execute server-side
+      // and may return results without the model synthesizing text.
       // Retry without tools, embedding the search results in the prompt.
       if (toolResults.length > 0) {
         return retryFromToolResults(

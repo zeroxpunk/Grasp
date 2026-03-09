@@ -12,7 +12,7 @@ export async function execute(
   params: CurrentEventsParams,
 ): Promise<string | null> {
   const { system, user } = buildCurrentEventsPrompt(params);
-  const webSearch = registry.webSearchTool({ searchRecencyFilter: "month" });
+  const webSearch = registry.webSearchTool();
 
   let result: string;
   try {
