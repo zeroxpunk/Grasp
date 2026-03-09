@@ -1,3 +1,4 @@
+import { redirect } from "next/navigation";
 import { GraspClient } from "@grasp/api-client";
 
 const backendUrl =
@@ -12,6 +13,9 @@ export async function getServerClient(): Promise<GraspClient> {
     const { auth } = await import("@/lib/auth");
     const session = await auth();
     const token = session?.graspAccessToken;
+    if (!token) {
+      redirect("/login");
+    }
     return new GraspClient({ baseUrl: backendUrl, token });
   }
 

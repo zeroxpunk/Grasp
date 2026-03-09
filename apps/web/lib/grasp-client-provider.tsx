@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useContext, useMemo } from "react";
-import { getSession } from "next-auth/react";
+import { getSession, signIn } from "next-auth/react";
 import { GraspClient, type TokenProvider } from "@grasp/api-client";
 
 const GraspClientContext = createContext<GraspClient | null>(null);
@@ -23,6 +23,10 @@ function createSessionTokenProvider(initialToken?: string): TokenProvider {
     pendingTokenLoad = getSession()
       .then((session) => {
         const nextToken = session?.graspAccessToken ?? devToken ?? "";
+        if (!nextToken && session?.user) {
+          signIn("google");
+          return "";
+        }
         cachedToken = nextToken;
         return nextToken;
       })
