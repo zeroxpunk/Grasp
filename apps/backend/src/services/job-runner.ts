@@ -4,6 +4,12 @@ import type { JobRow } from '../lib/db-types'
 
 const runningJobs = new Set<string>()
 
+const JOB_POLL_INTERVAL_MS = Number(process.env.JOB_POLL_INTERVAL_MS || 2000)
+const JOB_STALE_AFTER_MS = Number(process.env.JOB_STALE_AFTER_MS || 15 * 60 * 1000)
+
+let workerStarted = false
+let drainPromise: Promise<void> | null = null
+
 function parseCourseLessonJob(job: JobRow) {
   const courseId = job.courseId
   const lessonNumber = Number(job.payload.lessonNumber)
@@ -15,31 +21,7 @@ function parseCourseLessonJob(job: JobRow) {
   return { courseId, lessonNumber }
 }
 
-export function queueJob(jobId: string) {
-  if (runningJobs.has(jobId)) return
-
-  runningJobs.add(jobId)
-  queueMicrotask(async () => {
-    try {
-      await runJob(jobId)
-    } finally {
-      runningJobs.delete(jobId)
-    }
-  })
-}
-
-export async function runJob(jobId: string) {
-  const job = await jobService.getJob(jobId)
-  if (!job) {
-    return
-  }
-
-  if (job.status !== 'pending') {
-    return
-  }
-
-  await jobService.updateJobStatus(jobId, 'running')
-
+async function processJob(job: JobRow) {
   try {
     switch (job.type) {
       case 'course_creation': {
@@ -47,7 +29,7 @@ export async function runJob(jobId: string) {
         const context = typeof job.payload.context === 'string' ? job.payload.context : undefined
         const language = typeof job.payload.language === 'string' ? job.payload.language : undefined
         const result = await learningService.createCourse(job.userId, description, context, language)
-        await jobService.updateJobStatus(jobId, 'completed', {
+        await jobService.updateJobStatus(job.id, 'completed', {
           result: {
             slug: result.slug,
             title: result.title,
@@ -61,7 +43,7 @@ export async function runJob(jobId: string) {
       case 'lesson_generation': {
         const { courseId, lessonNumber } = parseCourseLessonJob(job)
         const result = await learningService.generateLesson(courseId, lessonNumber)
-        await jobService.updateJobStatus(jobId, 'completed', {
+        await jobService.updateJobStatus(job.id, 'completed', {
           result: {
             lessonNumber: result.lessonNumber,
             exerciseCount: result.exerciseCount,
@@ -76,7 +58,7 @@ export async function runJob(jobId: string) {
       case 'exercise_regeneration': {
         const { courseId, lessonNumber } = parseCourseLessonJob(job)
         const result = await learningService.regenerateExercises(courseId, lessonNumber)
-        await jobService.updateJobStatus(jobId, 'completed', {
+        await jobService.updateJobStatus(job.id, 'completed', {
           result: {
             lessonNumber: result.lessonNumber,
             exerciseCount: result.exerciseCount,
@@ -91,8 +73,67 @@ export async function runJob(jobId: string) {
         throw new Error(`Unsupported job type: ${job.type}`)
     }
   } catch (err) {
-    await jobService.updateJobStatus(jobId, 'failed', {
+    await jobService.updateJobStatus(job.id, 'failed', {
       error: err instanceof Error ? err.message : String(err),
     })
   }
+}
+
+async function recoverStaleJobs() {
+  const staleBefore = new Date(Date.now() - JOB_STALE_AFTER_MS)
+  await jobService.requeueStaleRunningJobs(staleBefore)
+}
+
+async function drainJobs() {
+  if (drainPromise) {
+    return drainPromise
+  }
+
+  drainPromise = (async () => {
+    await recoverStaleJobs()
+
+    while (true) {
+      const job = await jobService.claimNextPendingJob()
+      if (!job) {
+        return
+      }
+
+      if (runningJobs.has(job.id)) {
+        continue
+      }
+
+      runningJobs.add(job.id)
+      try {
+        await processJob(job)
+      } finally {
+        runningJobs.delete(job.id)
+      }
+    }
+  })().finally(() => {
+    drainPromise = null
+  })
+
+  return drainPromise
+}
+
+export function queueJob(_jobId: string) {
+  void drainJobs()
+}
+
+export function startJobWorker() {
+  if (workerStarted) {
+    return
+  }
+
+  workerStarted = true
+  setInterval(() => {
+    void drainJobs()
+  }, JOB_POLL_INTERVAL_MS)
+
+  void drainJobs()
+}
+
+export async function runJob(jobId: string) {
+  queueJob(jobId)
+  await drainJobs()
 }

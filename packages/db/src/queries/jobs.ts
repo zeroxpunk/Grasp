@@ -1,4 +1,4 @@
-import { eq, desc } from 'drizzle-orm'
+import { and, asc, desc, eq, isNull, lt } from 'drizzle-orm'
 import { jobs } from '../schema/jobs'
 import { getDb } from '../client'
 
@@ -12,6 +12,15 @@ export function listByUser(userId: string, limit = 20) {
     .from(jobs)
     .where(eq(jobs.userId, userId))
     .orderBy(desc(jobs.createdAt))
+    .limit(limit)
+}
+
+export function listPending(limit = 20) {
+  return getDb()
+    .select()
+    .from(jobs)
+    .where(eq(jobs.status, 'pending'))
+    .orderBy(asc(jobs.createdAt))
     .limit(limit)
 }
 
@@ -41,4 +50,48 @@ export function update(id: string, data: {
   completedAt?: Date | null
 }) {
   return getDb().update(jobs).set(data).where(eq(jobs.id, id))
+}
+
+export async function claimNextPending() {
+  const nextJob = await getDb()
+    .select()
+    .from(jobs)
+    .where(eq(jobs.status, 'pending'))
+    .orderBy(asc(jobs.createdAt))
+    .limit(1)
+    .then((rows) => rows[0] ?? null)
+
+  if (!nextJob) {
+    return null
+  }
+
+  return getDb()
+    .update(jobs)
+    .set({
+      status: 'running',
+      startedAt: new Date(),
+      completedAt: null,
+      error: null,
+    })
+    .where(and(eq(jobs.id, nextJob.id), eq(jobs.status, 'pending')))
+    .returning()
+    .then((rows) => rows[0] ?? null)
+}
+
+export function requeueStaleRunning(cutoff: Date) {
+  return getDb()
+    .update(jobs)
+    .set({
+      status: 'pending',
+      startedAt: null,
+      completedAt: null,
+      error: null,
+    })
+    .where(
+      and(
+        eq(jobs.status, 'running'),
+        isNull(jobs.completedAt),
+        lt(jobs.startedAt, cutoff),
+      ),
+    )
 }

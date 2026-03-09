@@ -28,6 +28,14 @@ export async function listUserJobs(userId: string, limit = 20) {
   return jobQueries.listByUser(userId, limit)
 }
 
+export async function claimNextPendingJob() {
+  return jobQueries.claimNextPending()
+}
+
+export async function requeueStaleRunningJobs(staleBefore: Date) {
+  await jobQueries.requeueStaleRunning(staleBefore)
+}
+
 export async function updateJobStatus(
   jobId: string,
   status: 'running' | 'completed' | 'failed',
