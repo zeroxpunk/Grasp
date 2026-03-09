@@ -21,6 +21,7 @@ export async function execute(
     prompt: user,
     ...(webSearch ? { tools: { web_search: webSearch }, maxSteps: 5 } : {}),
     label: "research",
+    toolResultFallback: "formatted-results",
   });
 
   if (result.trim().length > 0) {

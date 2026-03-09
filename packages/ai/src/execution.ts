@@ -51,6 +51,17 @@ function budgetToReasoningEffort(budget: number): "low" | "medium" | "high" {
   return "high";
 }
 
+function wrapExecutionError(label: string, err: unknown): Error {
+  const message = err instanceof Error ? err.message : String(err);
+  if (message.startsWith(`[${label}]`)) {
+    return err instanceof Error ? err : new Error(message);
+  }
+
+  return new Error(`[${label}] ${message}`, {
+    cause: err instanceof Error ? err : undefined,
+  });
+}
+
 export function resolveProviderOptions(
   model: LanguageModel,
   budget?: number,
@@ -88,8 +99,10 @@ export async function executeGenerateText(opts: {
   maxSteps?: number;
   onProgress?: () => void;
   label?: string;
+  toolResultFallback?: "formatted-results";
 }): Promise<string> {
-  const stop = log.time(opts.label || "generateText");
+  const label = opts.label || "generateText";
+  const stop = log.time(label);
   const providerOptions = resolveProviderOptions(opts.model, opts.thinkingBudget);
   const toolOpts = opts.tools
     ? { tools: opts.tools, stopWhen: stepCountIs(opts.maxSteps || 5) }
@@ -102,7 +115,7 @@ export async function executeGenerateText(opts: {
     toolResultsCount: number;
   }) {
     return [
-      `[${opts.label || "generateText"}]`,
+      `[${label}]`,
       `Incomplete tool generation: finishReason=${params.finishReason}.`,
       `toolCalls=${params.toolCalls.map((toolCall) => toolCall.toolName).join(",") || "none"}.`,
       `toolResults=${params.toolResultsCount}.`,
@@ -110,8 +123,130 @@ export async function executeGenerateText(opts: {
     ].join(" ");
   }
 
-  if (opts.onProgress) {
-    const result = streamText({
+  function buildToolResultsPrompt(outputs: unknown[]) {
+    return `${opts.prompt}\n\nWeb search results:\n${formatToolResultsForRetry(outputs)}`;
+  }
+
+  function fallbackFromToolResults(outputs: unknown[]) {
+    if (opts.toolResultFallback !== "formatted-results") {
+      return "";
+    }
+
+    return formatToolResultsForRetry(outputs).trim();
+  }
+
+  async function retryFromToolResults(
+    toolResults: Array<{ output: unknown }>,
+    generate: () => Promise<string>,
+  ) {
+    const outputs = toolResults.map((tr) => tr.output);
+    log.info(`retrying with ${outputs.length} tool result(s) in prompt`);
+
+    try {
+      const text = (await generate()).trim();
+      if (text.length > 0) {
+        return text;
+      }
+    } catch (err) {
+      log.error(`${label} retry after tool results failed`, err);
+      const fallback = fallbackFromToolResults(outputs);
+      if (fallback.length > 0) {
+        log.info(`${label} using formatted tool results fallback`, {
+          length: fallback.length,
+          toolResults: outputs.length,
+        });
+        return fallback;
+      }
+
+      throw wrapExecutionError(label, err);
+    }
+
+    const fallback = fallbackFromToolResults(outputs);
+    if (fallback.length > 0) {
+      log.info(`${label} using formatted tool results fallback`, {
+        length: fallback.length,
+        toolResults: outputs.length,
+      });
+      return fallback;
+    }
+
+    return "";
+  }
+
+  try {
+    if (opts.onProgress) {
+      const result = streamText({
+        model: opts.model,
+        ...(opts.system ? { system: opts.system } : {}),
+        prompt: opts.prompt,
+        maxOutputTokens: opts.maxOutputTokens,
+        ...(providerOptions ? { providerOptions } : {}),
+        ...toolOpts,
+      });
+
+      let accumulated = "";
+      let lastReport = 0;
+
+      for await (const delta of result.textStream) {
+        accumulated += delta;
+        if (accumulated.length - lastReport >= 500) {
+          lastReport = accumulated.length;
+          opts.onProgress!();
+        }
+      }
+
+      const finishReason = await result.finishReason;
+      const toolCalls = await result.toolCalls;
+      const toolResults = await result.toolResults;
+
+      stop();
+      log.info(`${label} done`, {
+        length: accumulated.length,
+        finishReason,
+        toolCalls: toolCalls.map((toolCall) => toolCall.toolName),
+        toolResults: toolResults.length,
+      });
+
+      if (opts.tools && finishReason === "tool-calls" && accumulated.trim().length === 0) {
+        log.info(buildIncompleteToolLoopWarning({
+          finishReason,
+          text: accumulated,
+          toolCalls,
+          toolResultsCount: toolResults.length,
+        }));
+
+        if (toolResults.length > 0) {
+          return retryFromToolResults(
+            toolResults,
+            async () => {
+              const retry = streamText({
+                model: opts.model,
+                ...(opts.system ? { system: opts.system } : {}),
+                prompt: buildToolResultsPrompt(toolResults.map((tr) => tr.output)),
+                maxOutputTokens: opts.maxOutputTokens,
+                ...(providerOptions ? { providerOptions } : {}),
+              });
+
+              let retryAccumulated = "";
+              let retryLastReport = 0;
+              for await (const delta of retry.textStream) {
+                retryAccumulated += delta;
+                if (retryAccumulated.length - retryLastReport >= 500) {
+                  retryLastReport = retryAccumulated.length;
+                  opts.onProgress!();
+                }
+              }
+
+              return retryAccumulated;
+            },
+          );
+        }
+      }
+
+      return accumulated;
+    }
+
+    const result = await generateText({
       model: opts.model,
       ...(opts.system ? { system: opts.system } : {}),
       prompt: opts.prompt,
@@ -120,115 +255,52 @@ export async function executeGenerateText(opts: {
       ...toolOpts,
     });
 
-    let accumulated = "";
-    let lastReport = 0;
-
-    for await (const delta of result.textStream) {
-      accumulated += delta;
-      if (accumulated.length - lastReport >= 500) {
-        lastReport = accumulated.length;
-        opts.onProgress!();
-      }
-    }
-
-    const finishReason = await result.finishReason;
-    const toolCalls = await result.toolCalls;
-    const toolResults = await result.toolResults;
+    const finishReason = result.finishReason;
+    const toolCalls = result.toolCalls;
+    const toolResults = result.toolResults;
 
     stop();
-    log.info(`${opts.label || "generateText"} done`, {
-      length: accumulated.length,
+    log.info(`${label} done`, {
+      length: result.text.length,
       finishReason,
       toolCalls: toolCalls.map((toolCall) => toolCall.toolName),
       toolResults: toolResults.length,
     });
 
-    if (opts.tools && finishReason === "tool-calls" && accumulated.trim().length === 0) {
+    if (opts.tools && finishReason === "tool-calls" && result.text.trim().length === 0) {
       log.info(buildIncompleteToolLoopWarning({
         finishReason,
-        text: accumulated,
+        text: result.text,
         toolCalls,
         toolResultsCount: toolResults.length,
       }));
 
+      // Provider-defined tools (e.g. gateway perplexitySearch) execute server-side
+      // and return results in a single step without the model synthesizing text.
+      // Retry without tools, embedding the search results in the prompt.
       if (toolResults.length > 0) {
-        const outputs = toolResults.map((tr) => tr.output);
-        log.info(`retrying with ${outputs.length} tool result(s) in prompt`);
+        return retryFromToolResults(
+          toolResults,
+          async () => {
+            const retry = await generateText({
+              model: opts.model,
+              ...(opts.system ? { system: opts.system } : {}),
+              prompt: buildToolResultsPrompt(toolResults.map((tr) => tr.output)),
+              maxOutputTokens: opts.maxOutputTokens,
+              ...(providerOptions ? { providerOptions } : {}),
+            });
 
-        const retry = streamText({
-          model: opts.model,
-          ...(opts.system ? { system: opts.system } : {}),
-          prompt: `${opts.prompt}\n\nWeb search results:\n${formatToolResultsForRetry(outputs)}`,
-          maxOutputTokens: opts.maxOutputTokens,
-          ...(providerOptions ? { providerOptions } : {}),
-        });
-
-        accumulated = "";
-        lastReport = 0;
-        for await (const delta of retry.textStream) {
-          accumulated += delta;
-          if (accumulated.length - lastReport >= 500) {
-            lastReport = accumulated.length;
-            opts.onProgress!();
-          }
-        }
-
-        return accumulated;
+            return retry.text;
+          },
+        );
       }
     }
 
-    return accumulated;
+    return result.text;
+  } catch (err) {
+    log.error(`${label} failed`, err);
+    throw wrapExecutionError(label, err);
   }
-
-  const result = await generateText({
-    model: opts.model,
-    ...(opts.system ? { system: opts.system } : {}),
-    prompt: opts.prompt,
-    maxOutputTokens: opts.maxOutputTokens,
-    ...(providerOptions ? { providerOptions } : {}),
-    ...toolOpts,
-  });
-
-  const finishReason = result.finishReason;
-  const toolCalls = result.toolCalls;
-  const toolResults = result.toolResults;
-
-  stop();
-  log.info(`${opts.label || "generateText"} done`, {
-    length: result.text.length,
-    finishReason,
-    toolCalls: toolCalls.map((toolCall) => toolCall.toolName),
-    toolResults: toolResults.length,
-  });
-
-  if (opts.tools && finishReason === "tool-calls" && result.text.trim().length === 0) {
-    log.info(buildIncompleteToolLoopWarning({
-      finishReason,
-      text: result.text,
-      toolCalls,
-      toolResultsCount: toolResults.length,
-    }));
-
-    // Provider-defined tools (e.g. gateway perplexitySearch) execute server-side
-    // and return results in a single step without the model synthesizing text.
-    // Retry without tools, embedding the search results in the prompt.
-    if (toolResults.length > 0) {
-      const outputs = toolResults.map((tr) => tr.output);
-      log.info(`retrying with ${outputs.length} tool result(s) in prompt`);
-
-      const retry = await generateText({
-        model: opts.model,
-        ...(opts.system ? { system: opts.system } : {}),
-        prompt: `${opts.prompt}\n\nWeb search results:\n${formatToolResultsForRetry(outputs)}`,
-        maxOutputTokens: opts.maxOutputTokens,
-        ...(providerOptions ? { providerOptions } : {}),
-      });
-
-      return retry.text;
-    }
-  }
-
-  return result.text;
 }
 
 export async function executeGenerateStructured<T>(opts: {
@@ -243,16 +315,46 @@ export async function executeGenerateStructured<T>(opts: {
   onProgress?: () => void;
   label?: string;
 }): Promise<T> {
-  const stop = log.time(opts.label || "structured");
+  const label = opts.label || "structured";
+  const stop = log.time(label);
   const providerOptions = resolveProviderOptions(opts.model, opts.thinkingBudget);
 
-  log.info(`generating structured: ${opts.label || opts.schemaName || "unnamed"}`, {
+  log.info(`generating structured: ${label || opts.schemaName || "unnamed"}`, {
     thinkingBudget: opts.thinkingBudget,
     maxOutputTokens: opts.maxOutputTokens,
   });
 
-  if (opts.onProgress) {
-    const result = streamText({
+  try {
+    if (opts.onProgress) {
+      const result = streamText({
+        model: opts.model,
+        system: opts.system,
+        prompt: opts.prompt,
+        maxOutputTokens: opts.maxOutputTokens,
+        ...(providerOptions ? { providerOptions } : {}),
+        output: Output.object({
+          schema: opts.schema,
+          name: opts.schemaName,
+          description: opts.schemaDescription,
+        }),
+      });
+
+      let count = 0;
+      for await (const _partial of result.partialOutputStream) {
+        count++;
+        if (count % 3 === 0) {
+          opts.onProgress!();
+        }
+      }
+
+      const output = await result.output;
+      if (!output) throw new Error("No structured output generated");
+
+      stop();
+      return output;
+    }
+
+    const { output } = await generateText({
       model: opts.model,
       system: opts.system,
       prompt: opts.prompt,
@@ -265,38 +367,14 @@ export async function executeGenerateStructured<T>(opts: {
       }),
     });
 
-    let count = 0;
-    for await (const _partial of result.partialOutputStream) {
-      count++;
-      if (count % 3 === 0) {
-        opts.onProgress!();
-      }
-    }
-
-    const output = await result.output;
     if (!output) throw new Error("No structured output generated");
 
     stop();
     return output;
+  } catch (err) {
+    log.error(`${label} failed`, err);
+    throw wrapExecutionError(label, err);
   }
-
-  const { output } = await generateText({
-    model: opts.model,
-    system: opts.system,
-    prompt: opts.prompt,
-    maxOutputTokens: opts.maxOutputTokens,
-    ...(providerOptions ? { providerOptions } : {}),
-    output: Output.object({
-      schema: opts.schema,
-      name: opts.schemaName,
-      description: opts.schemaDescription,
-    }),
-  });
-
-  if (!output) throw new Error("No structured output generated");
-
-  stop();
-  return output;
 }
 
 export async function executeGenerateJson(opts: {
@@ -307,38 +385,44 @@ export async function executeGenerateJson(opts: {
   thinkingBudget?: number;
   label?: string;
 }): Promise<unknown[]> {
-  const stop = log.time(opts.label || "json");
+  const label = opts.label || "json";
+  const stop = log.time(label);
   const providerOptions = resolveProviderOptions(opts.model, opts.thinkingBudget);
 
-  const result = await generateText({
-    model: opts.model,
-    system: opts.system + "\n\nIMPORTANT: Output ONLY a JSON array. No markdown fences, no explanation, no preamble. Just the raw JSON array.",
-    prompt: opts.prompt,
-    maxOutputTokens: opts.maxOutputTokens,
-    ...(providerOptions ? { providerOptions } : {}),
-  });
-
-  let text = result.text.trim();
-  if (text.startsWith("```")) {
-    text = text.replace(/^```(?:json)?\n?/, "").replace(/\n?```$/, "");
-  }
-
-  stop();
-
-  let parsed: unknown;
   try {
-    parsed = JSON.parse(text);
-  } catch {
-    throw new Error(
-      `[${opts.label || "json"}] Failed to parse JSON. Raw output (first 200 chars): ${text.slice(0, 200)}`
-    );
-  }
+    const result = await generateText({
+      model: opts.model,
+      system: opts.system + "\n\nIMPORTANT: Output ONLY a JSON array. No markdown fences, no explanation, no preamble. Just the raw JSON array.",
+      prompt: opts.prompt,
+      maxOutputTokens: opts.maxOutputTokens,
+      ...(providerOptions ? { providerOptions } : {}),
+    });
 
-  if (!Array.isArray(parsed)) {
-    throw new Error(`[${opts.label || "json"}] Expected JSON array, got ${typeof parsed}`);
-  }
+    let text = result.text.trim();
+    if (text.startsWith("```")) {
+      text = text.replace(/^```(?:json)?\n?/, "").replace(/\n?```$/, "");
+    }
 
-  return parsed;
+    stop();
+
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(text);
+    } catch {
+      throw new Error(
+        `[${label}] Failed to parse JSON. Raw output (first 200 chars): ${text.slice(0, 200)}`
+      );
+    }
+
+    if (!Array.isArray(parsed)) {
+      throw new Error(`[${label}] Expected JSON array, got ${typeof parsed}`);
+    }
+
+    return parsed;
+  } catch (err) {
+    log.error(`${label} failed`, err);
+    throw wrapExecutionError(label, err);
+  }
 }
 
 function getModelProvider(model: LanguageModel) {
