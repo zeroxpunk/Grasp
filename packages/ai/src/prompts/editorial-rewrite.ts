@@ -50,7 +50,7 @@ Sentences that declare importance instead of showing it: "This is crucial", "Thi
 
 ## What to preserve exactly (do NOT modify)
 - All \`[DIAGRAM: ...]\` markers — pass through character for character
-- All markdown links \`[text](url)\`
+- All markdown links \`[text](url)\` — pass through character for character, do not remove or rewrite URLs
 - All code block contents (everything between \`\`\` fences)
 - All HTML tags and attributes
 - The overall section structure and heading hierarchy
