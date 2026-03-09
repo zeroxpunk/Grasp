@@ -9,6 +9,42 @@ const log = createLogger("execution");
 type JSONValue = string | number | boolean | null | JSONValue[] | { [k: string]: JSONValue };
 type ProviderOptions = Record<string, Record<string, JSONValue>>;
 
+interface SearchResult {
+  title?: string;
+  url?: string;
+  snippet?: string;
+  date?: string;
+  last_updated?: string;
+}
+
+/**
+ * Format raw tool outputs into a concise text summary suitable for re-injection
+ * into a prompt. Keeps only title/url/snippet from search results and caps total length.
+ */
+function formatToolResultsForRetry(outputs: unknown[]): string {
+  const lines: string[] = [];
+
+  for (const output of outputs) {
+    const obj = output as Record<string, unknown> | null;
+    const results = (obj?.results ?? []) as SearchResult[];
+
+    for (const r of results) {
+      const title = r.title?.trim();
+      const url = r.url?.trim();
+      const snippet = r.snippet?.replace(/\s+/g, " ").trim().slice(0, 300);
+      if (!title && !snippet) continue;
+      if (title) lines.push(`### ${title}`);
+      if (url) lines.push(url);
+      if (snippet) lines.push(snippet);
+      lines.push("");
+    }
+  }
+
+  // Cap at ~30K chars to avoid blowing up context
+  const joined = lines.join("\n");
+  return joined.length > 30_000 ? joined.slice(0, 30_000) + "\n..." : joined;
+}
+
 function budgetToReasoningEffort(budget: number): "low" | "medium" | "high" {
   if (budget <= 4096) return "low";
   if (budget <= 16384) return "medium";
@@ -122,7 +158,7 @@ export async function executeGenerateText(opts: {
         const retry = streamText({
           model: opts.model,
           ...(opts.system ? { system: opts.system } : {}),
-          prompt: `${opts.prompt}\n\nWeb search results:\n${JSON.stringify(outputs, null, 2)}`,
+          prompt: `${opts.prompt}\n\nWeb search results:\n${formatToolResultsForRetry(outputs)}`,
           maxOutputTokens: opts.maxOutputTokens,
           ...(providerOptions ? { providerOptions } : {}),
         });
@@ -183,7 +219,7 @@ export async function executeGenerateText(opts: {
       const retry = await generateText({
         model: opts.model,
         ...(opts.system ? { system: opts.system } : {}),
-        prompt: `${opts.prompt}\n\nWeb search results:\n${JSON.stringify(outputs, null, 2)}`,
+        prompt: `${opts.prompt}\n\nWeb search results:\n${formatToolResultsForRetry(outputs)}`,
         maxOutputTokens: opts.maxOutputTokens,
         ...(providerOptions ? { providerOptions } : {}),
       });
