@@ -54,7 +54,7 @@ export interface WebSearchToolConfig {
 export interface ModelRegistry {
   resolve(role: ModelRole): LanguageModel;
   imageModel(modelId: string): ImageModel;
-  webSearchTool(config?: WebSearchToolConfig): WebSearchTool;
+  webSearchTool(config?: WebSearchToolConfig): WebSearchTool | null;
   defaultModels(): Record<ModelRole, string>;
 }
 
@@ -142,8 +142,9 @@ export function createModelRegistry(config: RegistryConfig): ModelRegistry {
       return getGoogle().image(modelId);
     },
 
-    webSearchTool(config) {
-      return getGateway().tools.perplexitySearch(config);
+    webSearchTool(toolConfig) {
+      if (!config.gatewayApiKey) return null;
+      return getGateway().tools.perplexitySearch(toolConfig);
     },
 
     defaultModels() {

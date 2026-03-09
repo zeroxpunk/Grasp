@@ -10,6 +10,7 @@ export interface LessonGenerationInput {
   lessonNumber: number;
   previousExerciseSummary?: string;
   writingSamples?: string[];
+  language?: string;
 }
 
 export interface LessonGenerationOutput {
@@ -24,13 +25,32 @@ export async function runLessonGenerationPipeline(
 ): Promise<LessonGenerationOutput> {
   const {
     manifest,
-    globalMemory,
-    courseMemory,
-    courseContext,
+    courseContext: rawCourseContext,
     lessonNumber,
     previousExerciseSummary,
     writingSamples,
+    language,
   } = input;
+
+  let { globalMemory, courseMemory } = input;
+  let courseContext = rawCourseContext;
+
+  // Translate inputs to English if target language is not English
+  if (language && language !== "en") {
+    const parts = [globalMemory, courseMemory, courseContext];
+    const delimiter = "\n\n---\n\n";
+    const combined = parts.join(delimiter);
+
+    const translated = await ai.translateContent(
+      { content: combined, targetLanguage: "English" },
+      { maxOutputTokens: 16384 },
+    );
+
+    const translatedParts = translated.split(delimiter);
+    globalMemory = translatedParts[0] ?? globalMemory;
+    courseMemory = translatedParts[1] ?? courseMemory;
+    courseContext = translatedParts[2] ?? courseContext;
+  }
 
   const lesson = manifest.lessons.find((l) => l.number === lessonNumber);
   if (!lesson) {
@@ -101,15 +121,9 @@ export async function runLessonGenerationPipeline(
     thinkingBudget: 32768,
   });
 
-  onProgress?.("rewriting");
-  const rewrittenContent = await ai.editorialRewrite(
-    { content: rawContent, globalMemory, courseMemory, writingSamples },
-    { maxOutputTokens: 65536, thinkingBudget: 10000 },
-  );
-
   onProgress?.("reviewing");
-  const content = await ai.reviewContent(
-    { content: rewrittenContent },
+  let content = await ai.reviewContent(
+    { content: rawContent },
     { maxOutputTokens: 65536, thinkingBudget: 10000 },
   );
 
@@ -133,6 +147,22 @@ export async function runLessonGenerationPipeline(
     });
   } catch {
     // Best-effort
+  }
+
+  if (language && language !== "en") {
+    onProgress?.("translating");
+    content = await ai.translateContent(
+      { content, targetLanguage: language, writingSamples },
+      { maxOutputTokens: 65536 },
+    );
+    try {
+      exercises = await ai.translateExercises({
+        exercises: JSON.stringify(exercises),
+        targetLanguage: language,
+      });
+    } catch {
+      // Best-effort — keep English exercises on failure
+    }
   }
 
   onProgress?.("done");

@@ -14,15 +14,21 @@ export async function execute(
   const { system, user } = buildCurrentEventsPrompt(params);
   const webSearch = registry.webSearchTool({ searchRecencyFilter: "month" });
 
-  const result = await executeGenerateText({
-    model: registry.resolve("research"),
-    system,
-    prompt: user,
-    ...(webSearch ? { tools: { web_search: webSearch }, maxSteps: 3 } : {}),
-    label: "current-events",
-  });
+  let result: string;
+  try {
+    result = await executeGenerateText({
+      model: registry.resolve("research"),
+      system,
+      prompt: user,
+      ...(webSearch ? { tools: { web_search: webSearch }, maxSteps: 3 } : {}),
+      label: "current-events",
+    });
+  } catch {
+    // Web search may loop without producing text — not an error, just no results
+    return null;
+  }
 
-  if (result.includes(SENTINEL)) {
+  if (!result || result.includes(SENTINEL)) {
     return null;
   }
 

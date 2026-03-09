@@ -10,6 +10,7 @@ export const courses = pgTable('courses', {
   context: text('context').notNull().default(''),
   memory: text('memory').notNull().default(''),
   generationStatus: text('generation_status').notNull().default('completed'),
+  language: text('language'),
   generationError: text('generation_error'),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),

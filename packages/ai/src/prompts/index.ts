@@ -31,6 +31,12 @@ export { buildEditorialRewritePrompt, type EditorialRewriteParams } from "./edit
 export { buildCurrentEventsPrompt, type CurrentEventsPromptParams } from "./current-events.js";
 export { buildContentReviewPrompt } from "./content-review.js";
 export {
+  buildContentTranslationPrompt,
+  buildExerciseTranslationPrompt,
+  type ContentTranslationParams,
+  type ExerciseTranslationParams,
+} from "./translation.js";
+export {
   buildTitleEnhancementPrompt,
   type TitleEnhancementPromptParams,
 } from "./title-enhancement.js";

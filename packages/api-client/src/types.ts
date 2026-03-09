@@ -45,6 +45,7 @@ export interface LessonEntry {
 export interface CreateCourseRequest {
   description: string
   context?: string
+  language?: string
 }
 
 export interface LessonDetail {

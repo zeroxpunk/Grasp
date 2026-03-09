@@ -45,7 +45,8 @@ export async function runJob(jobId: string) {
       case 'course_creation': {
         const description = typeof job.payload.description === 'string' ? job.payload.description : ''
         const context = typeof job.payload.context === 'string' ? job.payload.context : undefined
-        const result = await learningService.createCourse(job.userId, description, context)
+        const language = typeof job.payload.language === 'string' ? job.payload.language : undefined
+        const result = await learningService.createCourse(job.userId, description, context, language)
         await jobService.updateJobStatus(jobId, 'completed', {
           result: {
             slug: result.slug,

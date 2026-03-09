@@ -30,6 +30,8 @@ Do NOT generate lesson content — only the plan structure.
 Lesson slugs must be URL-friendly (lowercase, hyphens, no special chars).
 Never use emojis.
 
+IMPORTANT: Always generate content in English regardless of the language of the inputs.
+
 ${AESTHETIC_STANDARDS_SHORT}
 Titles should be precise, evocative, and parallel in structure.`;
 
@@ -67,6 +69,8 @@ Do NOT include exercises in the markdown content — they are generated as struc
 Lesson slugs must be URL-friendly (lowercase, hyphens, no special chars).
 Lesson content should be comprehensive markdown with proper formatting.
 Never use emojis.
+
+IMPORTANT: Always generate content in English regardless of the language of the inputs.
 
 ## Exercise Design
 Each lesson's exercises must include a mix of exercise types across cognitive tiers:

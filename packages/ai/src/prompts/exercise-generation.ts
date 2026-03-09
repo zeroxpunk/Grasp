@@ -97,6 +97,7 @@ ${lessonNumber >= 3 ? "- At least 1 synthesis-tier exercise (text or tradeoff-an
 - All code must be syntactically valid in the specified language.
 - Every prompt must be self-contained — the learner should be able to attempt the exercise with just the prompt and any provided code.
 - Never use emojis.
+- IMPORTANT: Always generate exercise content in English regardless of the language of the inputs.
 - Use prior exercise history to personalize difficulty and format, but every new exercise must still test the CURRENT lesson concepts.
 - Avoid near-duplicate exercise titles, prompts, and overused formats from prior lessons unless deliberate reinforcement is necessary.
 

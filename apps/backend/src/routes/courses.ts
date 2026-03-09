@@ -22,11 +22,13 @@ app.get('/:slug', async (c) => {
 
 app.post('/', async (c) => {
   const user = c.get('user')
-  const body = await c.req.json<{ description: string; context?: string }>()
+  const body = await c.req.json<{ description: string; context?: string; language?: string }>()
   const description = requireNonEmptyString(body.description)
   if (!description) {
     return c.json({ error: 'description is required' }, 400)
   }
+
+  const language = requireNonEmptyString(body.language)
 
   const job = await jobService.createJob({
     userId: user.id,
@@ -34,6 +36,7 @@ app.post('/', async (c) => {
     payload: {
       description,
       context: requireNonEmptyString(body.context) ?? '',
+      ...(language ? { language } : {}),
     },
   })
   queueJob(job.id)

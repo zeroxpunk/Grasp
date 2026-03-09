@@ -98,45 +98,58 @@ export async function searchLessonMaterials(
     lessonNumber: number;
   },
 ): Promise<string> {
-  const queries = buildLessonSearchQueries(params.manifest, params.lessonNumber);
-  const webSearch = ai.registry.webSearchTool(LESSON_SEARCH_TOOL_CONFIG);
+  try {
+    const queries = buildLessonSearchQueries(params.manifest, params.lessonNumber);
+    const webSearch = ai.registry.webSearchTool(LESSON_SEARCH_TOOL_CONFIG);
 
-  const result = await generateText({
-    model: ai.registry.resolve("primary"),
-    prompt: [
-      "Call the web_search tool exactly once.",
-      "Use the queries exactly as written as a single query array.",
-      "Do not write any prose.",
-      "Queries:",
-      ...queries.map((query, index) => `${index + 1}. ${query}`),
-    ].join("\n"),
-    tools: {
-      web_search: webSearch,
-    },
-    stopWhen: stepCountIs(2),
-    maxOutputTokens: 1024,
-  });
+    if (!webSearch) {
+      log.info("web search not available (no gateway key), skipping lesson search");
+      return "";
+    }
 
-  const searchOutput = result.toolResults.find(
-    (toolResult) => toolResult.toolName === "web_search",
-  )?.output as SearchToolOutput | undefined;
+    const result = await generateText({
+      model: ai.registry.resolve("primary"),
+      prompt: [
+        "Call the web_search tool exactly once.",
+        "Use the queries exactly as written as a single query array.",
+        "Do not write any prose.",
+        "Queries:",
+        ...queries.map((query, index) => `${index + 1}. ${query}`),
+      ].join("\n"),
+      tools: {
+        web_search: webSearch,
+      },
+      stopWhen: stepCountIs(3),
+      maxOutputTokens: 8192,
+    });
 
-  if (searchOutput?.error) {
-    throw new Error(`Lesson search failed: ${searchOutput.message || searchOutput.error}`);
-  }
+    const searchOutput = result.toolResults.find(
+      (toolResult) => toolResult.toolName === "web_search",
+    )?.output as SearchToolOutput | undefined;
 
-  const results = uniqueResults(searchOutput?.results ?? []);
-  log.info("lesson search completed", {
-    queries,
-    finishReason: result.finishReason,
-    toolResults: result.toolResults.length,
-    resultCount: results.length,
-  });
+    if (searchOutput?.error) {
+      log.info("lesson search tool returned error", { error: searchOutput.message || searchOutput.error });
+      return "";
+    }
 
-  if (results.length === 0) {
-    log.info("lesson search returned no results", { queries });
+    const results = uniqueResults(searchOutput?.results ?? []);
+    log.info("lesson search completed", {
+      queries,
+      finishReason: result.finishReason,
+      toolResults: result.toolResults.length,
+      resultCount: results.length,
+    });
+
+    if (results.length === 0) {
+      log.info("lesson search returned no results", { queries });
+      return "";
+    }
+
+    return formatLessonSearchMaterials(queries, results);
+  } catch (err) {
+    log.info("lesson search failed, continuing without search materials", {
+      error: err instanceof Error ? err.message : String(err),
+    });
     return "";
   }
-
-  return formatLessonSearchMaterials(queries, results);
 }

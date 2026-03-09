@@ -44,6 +44,7 @@ export function insert(data: {
   description: string
   context?: string
   memory?: string
+  language?: string | null
   generationStatus?: string
 }) {
   return getDb().insert(courses).values(data).returning().then(r => r[0]!)

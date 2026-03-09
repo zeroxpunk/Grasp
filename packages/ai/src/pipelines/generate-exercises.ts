@@ -9,13 +9,14 @@ export interface ExerciseGenerationInput {
   concepts: string[];
   lessonContent: string;
   previousExerciseSummary?: string;
+  language?: string;
 }
 
 export async function runExerciseGenerationPipeline(
   ai: GraspAI,
   input: ExerciseGenerationInput,
 ): Promise<Exercise[]> {
-  return ai.generateExercises({
+  let exercises = await ai.generateExercises({
     lessonTitle: input.lessonTitle,
     concepts: input.concepts,
     lessonContent: input.lessonContent,
@@ -27,4 +28,17 @@ export async function runExerciseGenerationPipeline(
     courseMemory: input.courseMemory,
     previousExerciseSummary: input.previousExerciseSummary,
   });
+
+  if (input.language && input.language !== "en") {
+    try {
+      exercises = await ai.translateExercises({
+        exercises: JSON.stringify(exercises),
+        targetLanguage: input.language,
+      });
+    } catch {
+      // Best-effort — keep English exercises on failure
+    }
+  }
+
+  return exercises;
 }

@@ -1,6 +1,57 @@
 import type { CourseManifest } from "../shared/types.js";
 import { AESTHETIC_STANDARDS_SHORT, VISUAL_INSTRUCTIONS } from "./shared.js";
 
+const WRITING_QUALITY = `## Patterns to delete
+
+### Flattery openings
+The "You know X. You feel Y. You understand Z. But..." setup. It butters up the reader before delivering the actual point. Delete the entire setup. Start with the point.
+
+BAD:
+"You know how to architect an app. You can feel when an animation runs 50ms too long. You understand why UIViewPropertyAnimator is better for interactive gestures. But apps that are objectively worse than yours make more money."
+
+GOOD:
+"Technical quality doesn't determine commercial success. Marketing is a separate skill, and it can be learned just as systematically as engineering."
+
+The entire "you know / you feel / you understand" block was pure flattery with zero information. The rewrite starts with the actual point.
+
+### False revelations
+"X is not Y. It's Z." — presenting ordinary facts as if they're shocking insights. State the fact plainly.
+
+BAD: "It's not about code quality. It's about marketing. To do something about it, you first need to understand what that word even means."
+GOOD: "Commercial success depends on marketing as much as on code. Here's what marketing means in practice."
+
+### Copywriting cadence
+Short sentence. Another short sentence. Dramatic pause. The payoff. This builds tension, not understanding. Vary sentence length based on what the thought requires.
+
+BAD: "The market is huge. But size doesn't matter. What matters is focus. Focus is everything."
+GOOD: "The market is huge, but that's the problem — without focusing on a specific segment, you can't compete with anyone."
+
+### Empty intensifiers
+"This is the key insight." "Remember this." "This is crucial." — if the content matters, the content shows it. Delete all importance announcements.
+
+### Motivational filler
+"Let's figure this out", "By the end of this lesson you'll understand", "Let's dive in", "Ready? Let's go!" — delete. Start teaching.
+
+### Rhetorical drama
+Labeling normal concepts as "chaos", "the real truth", "what nobody tells you". Normal concepts get normal descriptions.
+
+### Forced personalization
+Mechanically inserting the learner's context: "As an indie developer, you need to..." — this reads like a form letter. If the learner's background is relevant, let it come through in the choice of examples, not in announcements.
+
+### Listification
+Converting flowing explanation into bullet points or inserting sub-headers every two paragraphs. If the original was prose, keep it as prose. Lists are for genuinely parallel items, not for breaking up text the model didn't want to write as paragraphs.
+
+## Target voice
+
+A smart colleague explaining something at a whiteboard. Direct and plain, but not dry or academic.
+
+BAD (full of patterns above):
+"You've spent months perfecting your codebase. Every function is clean. Every test passes. But here's the thing nobody tells you: none of that matters if nobody finds your app. The real truth? Marketing isn't optional. It's everything. Let's break down what that actually means."
+
+GOOD (same content, just the explanation):
+"A well-built app with no distribution strategy will lose to a mediocre app with good marketing. Marketing for indie developers comes down to three things: positioning, channels, and iteration speed. Positioning means deciding who your app is for and what one problem it solves."
+`;
+
 export interface InitialLessonPromptParams {
   description: string;
   researchMaterials: string;
@@ -67,7 +118,11 @@ The lesson should:
 Do NOT include exercises in the markdown — exercises are generated separately.
 Never use emojis.
 
+IMPORTANT: Always generate content in English regardless of the language of the inputs.
+
 Format as markdown. Start with # heading for the lesson title.
+
+${WRITING_QUALITY}
 
 ${VISUAL_INSTRUCTIONS}
 
@@ -143,11 +198,15 @@ The lesson should:
 Do NOT include exercises in the markdown — exercises are generated separately.
 Never use emojis.
 
+IMPORTANT: Always generate content in English regardless of the language of the inputs.
+
 Format as markdown. Start with # heading for the lesson title.
 
 For YouTube links and external resources:
 - Include real, well-known resources you're confident exist
 - Format as markdown links: [Title](URL)
+
+${WRITING_QUALITY}
 
 ${VISUAL_INSTRUCTIONS}
 

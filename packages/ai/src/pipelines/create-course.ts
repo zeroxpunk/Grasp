@@ -7,6 +7,8 @@ export interface CourseCreationInput {
   context?: string;
   globalMemory: string;
   cachedResearch?: string;
+  language?: string;
+  writingSamples?: string[];
 }
 
 export interface CourseCreationPipelineOutput {
@@ -23,13 +25,31 @@ export async function runCourseCreationPipeline(
   input: CourseCreationInput,
   onProgress?: (step: string) => void,
 ): Promise<CourseCreationPipelineOutput> {
-  const { description, context, globalMemory, cachedResearch } = input;
+  const { cachedResearch, language, writingSamples } = input;
+  let { description, context, globalMemory } = input;
+
+  // Translate inputs to English if target language is not English
+  if (language && language !== "en") {
+    const parts = [description, context ?? "", globalMemory];
+    const delimiter = "\n\n---\n\n";
+    const combined = parts.join(delimiter);
+
+    const translated = await ai.translateContent(
+      { content: combined, targetLanguage: "English" },
+      { maxOutputTokens: 16384 },
+    );
+
+    const translatedParts = translated.split(delimiter);
+    description = translatedParts[0] ?? description;
+    context = translatedParts[1] || context;
+    globalMemory = translatedParts[2] ?? globalMemory;
+  }
 
   onProgress?.("researching");
   const research = cachedResearch ?? await ai.research({ description, context });
 
   onProgress?.("planning");
-  const plan = await ai.planCourse({
+  let plan = await ai.planCourse({
     description,
     researchMaterials: research,
     context,
@@ -40,7 +60,7 @@ export async function runCourseCreationPipeline(
   });
 
   onProgress?.("enhancing-titles");
-  const enhancedTitles = await ai.enhanceTitles({
+  let enhancedTitles = await ai.enhanceTitles({
     courseTitle: plan.title,
     lessons: plan.lessons.map((lesson, index) => ({
       number: lesson.number || index + 1,
@@ -83,7 +103,7 @@ export async function runCourseCreationPipeline(
   });
 
   onProgress?.("reviewing");
-  const firstLessonContent = await ai.reviewContent(
+  let firstLessonContent = await ai.reviewContent(
     { content: rawFirstLessonContent },
     {
       maxOutputTokens: 65536,
@@ -111,6 +131,58 @@ export async function runCourseCreationPipeline(
   } catch {
     // Best-effort: return empty if exercise generation fails
   }
+  if (language && language !== "en") {
+    onProgress?.("translating");
+
+    // Translate first lesson content
+    firstLessonContent = await ai.translateContent(
+      { content: firstLessonContent, targetLanguage: language, writingSamples },
+      { maxOutputTokens: 65536 },
+    );
+
+    // Translate exercises (best-effort)
+    try {
+      firstLessonExercises = await ai.translateExercises({
+        exercises: JSON.stringify(firstLessonExercises),
+        targetLanguage: language,
+      });
+    } catch {
+      // Best-effort — keep English exercises on failure
+    }
+
+    // Translate plan metadata: title, description, and enhanced titles
+    const metadataBlock = [
+      `# ${plan.title}`,
+      plan.description,
+      "---",
+      ...enhancedTitles.map((t, i) => `${i + 1}. ${t}`),
+    ].join("\n\n");
+
+    const translatedMetadata = await ai.translateContent(
+      { content: metadataBlock, targetLanguage: language, writingSamples },
+      { maxOutputTokens: 8192 },
+    );
+
+    const metadataLines = translatedMetadata.split("\n\n");
+    const titleLine = metadataLines[0];
+    if (titleLine?.startsWith("# ")) {
+      plan = { ...plan, title: titleLine.slice(2).trim() };
+    }
+    const descLine = metadataLines[1];
+    if (descLine && descLine !== "---") {
+      plan = { ...plan, description: descLine.trim() };
+    }
+
+    // Parse translated titles back — they come after the "---" separator
+    const separatorIdx = metadataLines.indexOf("---");
+    if (separatorIdx !== -1) {
+      const titleLines = metadataLines.slice(separatorIdx + 1);
+      enhancedTitles = titleLines
+        .map((line) => line.replace(/^\d+\.\s*/, "").trim())
+        .filter((t) => t.length > 0);
+    }
+  }
+
   onProgress?.("done");
 
   return {

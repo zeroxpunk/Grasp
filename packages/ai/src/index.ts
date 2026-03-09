@@ -11,6 +11,7 @@ import * as currentEventsAgent from "./agents/current-events.js";
 import * as contentReviewAgent from "./agents/content-review.js";
 import * as titleEnhancementAgent from "./agents/title-enhancement.js";
 import * as imageGenerationAgent from "./agents/image-generation.js";
+import * as translationAgent from "./agents/translation.js";
 import * as promptLibrary from "./prompts/index.js";
 import type { CoursePlanOutput, EvaluationOutput } from "./shared/schemas.js";
 import type { Exercise, StreamEvent, ExecutionOptions } from "./shared/types.js";
@@ -32,6 +33,8 @@ export interface GraspAI {
   enrichWithCurrentEvents(params: currentEventsAgent.CurrentEventsParams): Promise<string | null>;
   reviewContent(params: { content: string }, opts?: ExecutionOptions): Promise<string>;
   enhanceTitles(params: titleEnhancementAgent.TitleEnhancementParams): Promise<string[]>;
+  translateContent(params: translationAgent.ContentTranslationParams, opts?: ExecutionOptions): Promise<string>;
+  translateExercises(params: translationAgent.ExerciseTranslationParams): Promise<Exercise[]>;
   prompts: {
     research: typeof promptLibrary.buildResearchPrompt;
     coursePlan: typeof promptLibrary.buildCoursePlanPrompt;
@@ -48,6 +51,8 @@ export interface GraspAI {
     titleEnhancement: typeof promptLibrary.buildTitleEnhancementPrompt;
     diagramImage: typeof promptLibrary.buildDiagramImagePrompt;
     courseMemory: typeof promptLibrary.buildInitialCourseMemory;
+    contentTranslation: typeof promptLibrary.buildContentTranslationPrompt;
+    exerciseTranslation: typeof promptLibrary.buildExerciseTranslationPrompt;
   };
   registry: ModelRegistry;
 }
@@ -72,6 +77,8 @@ export function createAI(config: RegistryConfig): GraspAI {
     enrichWithCurrentEvents: (params) => currentEventsAgent.execute(registry, params),
     reviewContent: (params, opts) => contentReviewAgent.execute(registry, params, opts),
     enhanceTitles: (params) => titleEnhancementAgent.execute(registry, params),
+    translateContent: (params, opts) => translationAgent.executeContentTranslation(registry, params, opts),
+    translateExercises: (params) => translationAgent.executeExerciseTranslation(registry, params),
     prompts: {
       research: promptLibrary.buildResearchPrompt,
       coursePlan: promptLibrary.buildCoursePlanPrompt,
@@ -88,6 +95,8 @@ export function createAI(config: RegistryConfig): GraspAI {
       titleEnhancement: promptLibrary.buildTitleEnhancementPrompt,
       diagramImage: promptLibrary.buildDiagramImagePrompt,
       courseMemory: promptLibrary.buildInitialCourseMemory,
+      contentTranslation: promptLibrary.buildContentTranslationPrompt,
+      exerciseTranslation: promptLibrary.buildExerciseTranslationPrompt,
     },
     registry,
   };
@@ -147,6 +156,7 @@ export type { TutorParams, TutorCallbacks } from "./agents/tutor.js";
 export type { TitleEnhancementParams } from "./agents/title-enhancement.js";
 export type { CurrentEventsParams } from "./agents/current-events.js";
 export type { ImageGenerationParams, GeneratedImage } from "./agents/image-generation.js";
+export type { ContentTranslationParams, ExerciseTranslationParams } from "./agents/translation.js";
 
 export {
   runCourseCreationPipeline,

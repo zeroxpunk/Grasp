@@ -169,6 +169,7 @@ export async function createCourse(
   userId: string,
   description: string,
   context?: string,
+  language?: string,
 ): Promise<CourseCreationResult> {
   const user = await userQueries.findById(userId)
   if (!user) {
@@ -177,11 +178,18 @@ export async function createCourse(
 
   const cachedResearch = await getCachedResearch(description, context)
 
+  const recentMessages = await chatMessageQueries.listRecentByUser(user.id, 20)
+  const writingSamples = recentMessages
+    .map((m) => m.content)
+    .filter((c) => c.length >= 15)
+
   const pipelineResult = await runCourseCreationPipeline(getAI(), {
     description,
     context,
     globalMemory: user.globalMemory,
     cachedResearch: cachedResearch ?? undefined,
+    language: language || undefined,
+    writingSamples: writingSamples.length > 0 ? writingSamples : undefined,
   })
 
   if (!cachedResearch) {
@@ -203,6 +211,7 @@ export async function createCourse(
       description: pipelineResult.plan.description,
       context: context ?? '',
       memory: pipelineResult.courseMemory,
+      language: language || null,
       generationStatus: 'running',
     })
     courseId = course.id
@@ -276,6 +285,7 @@ export async function generateLesson(
       lessonNumber,
       previousExerciseSummary: await buildPreviousExerciseSummary(course.id, course.userId, lessonNumber),
       writingSamples: writingSamples.length > 0 ? writingSamples : undefined,
+      language: course.language || undefined,
     })
 
     const content = await imageService.processMarkdownVisuals(
@@ -323,6 +333,7 @@ export async function regenerateExercises(
     concepts: lesson.concepts,
     lessonContent: lesson.content,
     previousExerciseSummary: await buildPreviousExerciseSummary(course.id, course.userId, lessonNumber),
+    language: course.language || undefined,
   })
 
   await exerciseService.replaceExercises(lesson.id, exercises)
