@@ -60,7 +60,7 @@ Generate the full content for Lesson ${lessonNumber}: "${lessonTitle}".
 The lesson should:
 1. Cover these concepts thoroughly: ${concepts.join(", ")}
 2. Include clear concept explanations adapted to the learner's background
-3. Include code examples where relevant
+3. Include code examples ONLY when the topic itself is technical and code genuinely illustrates the concept. Never use code as a metaphor or analogy for non-technical ideas — use plain language, diagrams, or real-world examples instead
 4. Reference real resources from the researched materials (YouTube, docs, articles, repos) — use markdown links
 5. Be aware of where this lesson fits in the course arc (what comes later, what this prepares for)
 
@@ -136,7 +136,7 @@ The lesson should:
 1. Build on what the learner has already covered (see mastery levels and previous lessons)
 2. Address any known gaps or weak areas from course memory insights
 3. Include clear concept explanations adapted to the learner's background
-4. Include code examples where relevant
+4. Include code examples ONLY when the topic itself is technical and code genuinely illustrates the concept. Never use code as a metaphor or analogy for non-technical ideas — use plain language, diagrams, or real-world examples instead
 5. Include external resources: YouTube video links, documentation links, articles
 6. Be comprehensive but respect the learner's level — skip basics they've mastered
 

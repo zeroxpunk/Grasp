@@ -27,6 +27,8 @@ export {
   type TutorPromptMessage,
   type TutorSystemPromptParams,
 } from "./tutor.js";
+export { buildEditorialRewritePrompt, type EditorialRewriteParams } from "./editorial-rewrite.js";
+export { buildCurrentEventsPrompt, type CurrentEventsPromptParams } from "./current-events.js";
 export { buildContentReviewPrompt } from "./content-review.js";
 export {
   buildTitleEnhancementPrompt,

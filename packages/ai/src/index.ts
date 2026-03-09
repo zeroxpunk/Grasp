@@ -6,6 +6,8 @@ import * as lessonContentAgent from "./agents/lesson-content.js";
 import * as exerciseGenAgent from "./agents/exercise-generation.js";
 import * as evaluationAgent from "./agents/evaluation.js";
 import * as tutorAgent from "./agents/tutor.js";
+import * as editorialRewriteAgent from "./agents/editorial-rewrite.js";
+import * as currentEventsAgent from "./agents/current-events.js";
 import * as contentReviewAgent from "./agents/content-review.js";
 import * as titleEnhancementAgent from "./agents/title-enhancement.js";
 import * as imageGenerationAgent from "./agents/image-generation.js";
@@ -26,6 +28,8 @@ export interface GraspAI {
   images: {
     generateDiagram(params: imageGenerationAgent.ImageGenerationParams): Promise<imageGenerationAgent.GeneratedImage | null>;
   };
+  editorialRewrite(params: editorialRewriteAgent.EditorialRewriteParams, opts?: ExecutionOptions): Promise<string>;
+  enrichWithCurrentEvents(params: currentEventsAgent.CurrentEventsParams): Promise<string | null>;
   reviewContent(params: { content: string }, opts?: ExecutionOptions): Promise<string>;
   enhanceTitles(params: titleEnhancementAgent.TitleEnhancementParams): Promise<string[]>;
   prompts: {
@@ -38,6 +42,8 @@ export interface GraspAI {
     evaluation: typeof promptLibrary.buildEvaluationPrompt;
     tutor: typeof promptLibrary.buildTutorSystemPrompt;
     tutorConversation: typeof promptLibrary.buildTutorConversationPrompt;
+    editorialRewrite: typeof promptLibrary.buildEditorialRewritePrompt;
+    currentEvents: typeof promptLibrary.buildCurrentEventsPrompt;
     contentReview: typeof promptLibrary.buildContentReviewPrompt;
     titleEnhancement: typeof promptLibrary.buildTitleEnhancementPrompt;
     diagramImage: typeof promptLibrary.buildDiagramImagePrompt;
@@ -62,6 +68,8 @@ export function createAI(config: RegistryConfig): GraspAI {
     images: {
       generateDiagram: (params) => imageGenerationAgent.execute(registry, params),
     },
+    editorialRewrite: (params, opts) => editorialRewriteAgent.execute(registry, params, opts),
+    enrichWithCurrentEvents: (params) => currentEventsAgent.execute(registry, params),
     reviewContent: (params, opts) => contentReviewAgent.execute(registry, params, opts),
     enhanceTitles: (params) => titleEnhancementAgent.execute(registry, params),
     prompts: {
@@ -74,6 +82,8 @@ export function createAI(config: RegistryConfig): GraspAI {
       evaluation: promptLibrary.buildEvaluationPrompt,
       tutor: promptLibrary.buildTutorSystemPrompt,
       tutorConversation: promptLibrary.buildTutorConversationPrompt,
+      editorialRewrite: promptLibrary.buildEditorialRewritePrompt,
+      currentEvents: promptLibrary.buildCurrentEventsPrompt,
       contentReview: promptLibrary.buildContentReviewPrompt,
       titleEnhancement: promptLibrary.buildTitleEnhancementPrompt,
       diagramImage: promptLibrary.buildDiagramImagePrompt,
@@ -135,6 +145,7 @@ export type { ExerciseGenParams } from "./agents/exercise-generation.js";
 export type { EvaluationParams } from "./agents/evaluation.js";
 export type { TutorParams, TutorCallbacks } from "./agents/tutor.js";
 export type { TitleEnhancementParams } from "./agents/title-enhancement.js";
+export type { CurrentEventsParams } from "./agents/current-events.js";
 export type { ImageGenerationParams, GeneratedImage } from "./agents/image-generation.js";
 
 export {

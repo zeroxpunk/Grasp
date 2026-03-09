@@ -1,4 +1,4 @@
-import { eq, and, asc } from 'drizzle-orm'
+import { eq, and, asc, desc } from 'drizzle-orm'
 import { getDb } from '../client';
 import { chatMessages } from '../schema/index';
 
@@ -14,6 +14,15 @@ export function deleteByLessonAndUser(lessonId: string, userId: string) {
   return getDb()
     .delete(chatMessages)
     .where(and(eq(chatMessages.lessonId, lessonId), eq(chatMessages.userId, userId)))
+}
+
+export function listRecentByUser(userId: string, limit = 20) {
+  return getDb()
+    .select({ content: chatMessages.content })
+    .from(chatMessages)
+    .where(and(eq(chatMessages.userId, userId), eq(chatMessages.role, 'user')))
+    .orderBy(desc(chatMessages.createdAt))
+    .limit(limit)
 }
 
 export function insertMany(data: {

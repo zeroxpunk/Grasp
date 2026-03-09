@@ -10,7 +10,6 @@ const LESSON_SEARCH_TOOL_CONFIG: WebSearchToolConfig = {
   maxResults: 20,
   maxTokensPerPage: 2048,
   maxTokens: 1_000_000,
-  searchLanguageFilter: ["en"],
 };
 
 interface SearchResultItem {
@@ -114,7 +113,7 @@ export async function searchLessonMaterials(
     tools: {
       web_search: webSearch,
     },
-    stopWhen: stepCountIs(1),
+    stopWhen: stepCountIs(2),
     maxOutputTokens: 1024,
   });
 
@@ -135,7 +134,8 @@ export async function searchLessonMaterials(
   });
 
   if (results.length === 0) {
-    throw new Error(`Lesson search returned no results for queries: ${queries.join(" | ")}`);
+    log.info("lesson search returned no results", { queries });
+    return "";
   }
 
   return formatLessonSearchMaterials(queries, results);

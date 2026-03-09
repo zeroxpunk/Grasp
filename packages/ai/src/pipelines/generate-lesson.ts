@@ -9,6 +9,7 @@ export interface LessonGenerationInput {
   courseContext: string;
   lessonNumber: number;
   previousExerciseSummary?: string;
+  writingSamples?: string[];
 }
 
 export interface LessonGenerationOutput {
@@ -28,6 +29,7 @@ export async function runLessonGenerationPipeline(
     courseContext,
     lessonNumber,
     previousExerciseSummary,
+    writingSamples,
   } = input;
 
   const lesson = manifest.lessons.find((l) => l.number === lessonNumber);
@@ -35,7 +37,22 @@ export async function runLessonGenerationPipeline(
     throw new Error(`Lesson ${lessonNumber} not found in manifest`);
   }
 
-  const searchContext = await searchLessonMaterials(ai, { manifest, lessonNumber });
+  let searchContext = await searchLessonMaterials(ai, { manifest, lessonNumber });
+
+  onProgress?.("enriching-current-events");
+  try {
+    const currentEvents = await ai.enrichWithCurrentEvents({
+      courseTitle: manifest.title,
+      lessonTitle: lesson.title,
+      concepts: lesson.concepts,
+      courseDescription: manifest.description,
+    });
+    if (currentEvents) {
+      searchContext = searchContext + "\n\n" + currentEvents;
+    }
+  } catch {
+    // Best-effort — pipeline never fails because of this step
+  }
 
   const previousLessons = manifest.lessons
     .filter((entry) => entry.number < lessonNumber)
@@ -84,9 +101,15 @@ export async function runLessonGenerationPipeline(
     thinkingBudget: 32768,
   });
 
+  onProgress?.("rewriting");
+  const rewrittenContent = await ai.editorialRewrite(
+    { content: rawContent, globalMemory, courseMemory, writingSamples },
+    { maxOutputTokens: 65536, thinkingBudget: 10000 },
+  );
+
   onProgress?.("reviewing");
   const content = await ai.reviewContent(
-    { content: rawContent },
+    { content: rewrittenContent },
     { maxOutputTokens: 65536, thinkingBudget: 10000 },
   );
 

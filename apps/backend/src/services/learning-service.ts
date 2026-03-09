@@ -4,7 +4,7 @@ import {
   runLessonGenerationPipeline,
   runExerciseGenerationPipeline,
 } from '@grasp/ai'
-import { courseQueries, lessonQueries, masteryQueries, userQueries } from '@grasp/db'
+import { chatMessageQueries, courseQueries, lessonQueries, masteryQueries, userQueries } from '@grasp/db'
 import type { CourseRow, LessonRow } from '../lib/db-types'
 import * as courseService from './course-service'
 import * as exerciseService from './exercise-service'
@@ -263,6 +263,11 @@ export async function generateLesson(
   await lessonQueries.updateGenerationStatus(lesson.id, 'running', null)
 
   try {
+    const recentMessages = await chatMessageQueries.listRecentByUser(user.id, 20)
+    const writingSamples = recentMessages
+      .map((m) => m.content)
+      .filter((c) => c.length >= 15)
+
     const result = await runLessonGenerationPipeline(getAI(), {
       manifest,
       globalMemory: user.globalMemory,
@@ -270,6 +275,7 @@ export async function generateLesson(
       courseContext: course.context,
       lessonNumber,
       previousExerciseSummary: await buildPreviousExerciseSummary(course.id, course.userId, lessonNumber),
+      writingSamples: writingSamples.length > 0 ? writingSamples : undefined,
     })
 
     const content = await imageService.processMarkdownVisuals(
