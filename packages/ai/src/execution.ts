@@ -59,21 +59,19 @@ export async function executeGenerateText(opts: {
     ? { tools: opts.tools, stopWhen: stepCountIs(opts.maxSteps || 5) }
     : {};
 
-  function buildIncompleteToolLoopError(params: {
+  function buildIncompleteToolLoopWarning(params: {
     finishReason: string;
     text: string;
     toolCalls: Array<{ toolName: string }>;
     toolResultsCount: number;
   }) {
-    return new Error(
-      [
-        `[${opts.label || "generateText"}]`,
-        `Incomplete tool generation: finishReason=${params.finishReason}.`,
-        `toolCalls=${params.toolCalls.map((toolCall) => toolCall.toolName).join(",") || "none"}.`,
-        `toolResults=${params.toolResultsCount}.`,
-        `textLength=${params.text.length}.`,
-      ].join(" "),
-    );
+    return [
+      `[${opts.label || "generateText"}]`,
+      `Incomplete tool generation: finishReason=${params.finishReason}.`,
+      `toolCalls=${params.toolCalls.map((toolCall) => toolCall.toolName).join(",") || "none"}.`,
+      `toolResults=${params.toolResultsCount}.`,
+      `textLength=${params.text.length}.`,
+    ].join(" ");
   }
 
   if (opts.onProgress) {
@@ -110,12 +108,37 @@ export async function executeGenerateText(opts: {
     });
 
     if (opts.tools && finishReason === "tool-calls" && accumulated.trim().length === 0) {
-      throw buildIncompleteToolLoopError({
+      log.info(buildIncompleteToolLoopWarning({
         finishReason,
         text: accumulated,
         toolCalls,
         toolResultsCount: toolResults.length,
-      });
+      }));
+
+      if (toolResults.length > 0) {
+        const outputs = toolResults.map((tr) => tr.output);
+        log.info(`retrying with ${outputs.length} tool result(s) in prompt`);
+
+        const retry = streamText({
+          model: opts.model,
+          ...(opts.system ? { system: opts.system } : {}),
+          prompt: `${opts.prompt}\n\nWeb search results:\n${JSON.stringify(outputs, null, 2)}`,
+          maxOutputTokens: opts.maxOutputTokens,
+          ...(providerOptions ? { providerOptions } : {}),
+        });
+
+        accumulated = "";
+        lastReport = 0;
+        for await (const delta of retry.textStream) {
+          accumulated += delta;
+          if (accumulated.length - lastReport >= 500) {
+            lastReport = accumulated.length;
+            opts.onProgress!();
+          }
+        }
+
+        return accumulated;
+      }
     }
 
     return accumulated;
@@ -143,12 +166,30 @@ export async function executeGenerateText(opts: {
   });
 
   if (opts.tools && finishReason === "tool-calls" && result.text.trim().length === 0) {
-    throw buildIncompleteToolLoopError({
+    log.info(buildIncompleteToolLoopWarning({
       finishReason,
       text: result.text,
       toolCalls,
       toolResultsCount: toolResults.length,
-    });
+    }));
+
+    // Provider-defined tools (e.g. gateway perplexitySearch) execute server-side
+    // and return results in a single step without the model synthesizing text.
+    // Retry without tools, embedding the search results in the prompt.
+    if (toolResults.length > 0) {
+      const outputs = toolResults.map((tr) => tr.output);
+      log.info(`retrying with ${outputs.length} tool result(s) in prompt`);
+
+      const retry = await generateText({
+        model: opts.model,
+        ...(opts.system ? { system: opts.system } : {}),
+        prompt: `${opts.prompt}\n\nWeb search results:\n${JSON.stringify(outputs, null, 2)}`,
+        maxOutputTokens: opts.maxOutputTokens,
+        ...(providerOptions ? { providerOptions } : {}),
+      });
+
+      return retry.text;
+    }
   }
 
   return result.text;
