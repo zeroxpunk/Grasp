@@ -1,11 +1,37 @@
 import { auth, signIn, signOut } from "@/lib/auth";
 import { redirect } from "next/navigation";
 
+async function doSignOut() {
+  "use server";
+  await signOut({ redirectTo: "/login" });
+}
+
 export default async function LoginPage() {
   const session = await auth();
   if (session?.graspAccessToken) redirect("/");
   if (session) {
-    await signOut({ redirect: false });
+    return (
+      <div className="flex min-h-[calc(100vh-3.5rem)] items-center justify-center">
+        <div className="w-full max-w-sm space-y-8 px-6 text-center">
+          <div>
+            <h1 className="text-2xl font-semibold tracking-tight text-zinc-100">
+              Session expired
+            </h1>
+            <p className="mt-2 text-sm text-zinc-500">
+              Your session has expired. Please sign in again.
+            </p>
+          </div>
+          <form action={doSignOut}>
+            <button
+              type="submit"
+              className="w-full border border-zinc-700 px-5 py-3 text-sm text-zinc-300 hover:text-zinc-100 hover:border-zinc-500 transition-colors"
+            >
+              Sign in again
+            </button>
+          </form>
+        </div>
+      </div>
+    );
   }
 
   return (
